@@ -1,0 +1,131 @@
+province,method,fold,rmse
+Alberta,l-bfgs-b,0,254.17161904081635
+Alberta,l-bfgs-b,1,21.862886772175475
+Alberta,l-bfgs-b,2,10.292013438410688
+Alberta,l-bfgs-b,3,4.052922354306863
+Alberta,l-bfgs-b,4,1.909976228567456
+Alberta,l-bfgs-b,5,12.59793925457002
+Alberta,l-bfgs-b,6,41.53839861617439
+Alberta,l-bfgs-b,7,47.969824445146344
+Alberta,l-bfgs-b,8,37.396157927719635
+Alberta,l-bfgs-b,9,33.85006272435107
+BC,l-bfgs-b,0,3.738423187110615
+BC,l-bfgs-b,1,8.564010519673152
+BC,l-bfgs-b,2,12.60574030069983
+BC,l-bfgs-b,3,4.289236853039948
+BC,l-bfgs-b,4,4.545778617166118
+BC,l-bfgs-b,5,13.66749866573278
+BC,l-bfgs-b,6,13.403314781441129
+BC,l-bfgs-b,7,15.88224535986647
+BC,l-bfgs-b,8,51.033603559502566
+BC,l-bfgs-b,9,34.281879226552306
+Manitoba,l-bfgs-b,0,1.3468285894999195
+Manitoba,l-bfgs-b,1,1.1118420688589594
+Manitoba,l-bfgs-b,2,0.5362784252045893
+Manitoba,l-bfgs-b,3,0.5993060728772119
+Manitoba,l-bfgs-b,4,0.5057072910083172
+Manitoba,l-bfgs-b,5,0.46709343551637594
+Manitoba,l-bfgs-b,6,0.5519097838095259
+Manitoba,l-bfgs-b,7,4.782523109122339
+Manitoba,l-bfgs-b,8,3.7178397755019352
+Manitoba,l-bfgs-b,9,7.027936531421747
+New Brunswick,l-bfgs-b,0,0.0
+New Brunswick,l-bfgs-b,1,0.0
+New Brunswick,l-bfgs-b,2,0.0
+New Brunswick,l-bfgs-b,3,1.3954814298487213
+New Brunswick,l-bfgs-b,4,7.931979085084853
+New Brunswick,l-bfgs-b,5,1.7702599576750806
+New Brunswick,l-bfgs-b,6,0.8673885534678681
+New Brunswick,l-bfgs-b,7,0.6326977962681585
+New Brunswick,l-bfgs-b,8,0.5872776053920125
+New Brunswick,l-bfgs-b,9,0.6213386552242841
+NL,l-bfgs-b,0,8.527553262884245
+NL,l-bfgs-b,1,1.282221619528086
+NL,l-bfgs-b,2,0.9050177200734018
+NL,l-bfgs-b,3,0.6341936776726801
+NL,l-bfgs-b,4,0.4683089191654751
+NL,l-bfgs-b,5,0.45447388383978776
+NL,l-bfgs-b,6,0.40162884172332286
+NL,l-bfgs-b,7,0.5148002655217468
+NL,l-bfgs-b,8,0.6355974781561012
+NL,l-bfgs-b,9,0.47652766019295556
+Nova Scotia,l-bfgs-b,0,6.411338640088725
+Nova Scotia,l-bfgs-b,1,4195.135446226591
+Nova Scotia,l-bfgs-b,2,0.8867796546598526
+Nova Scotia,l-bfgs-b,3,0.3843154571274537
+Nova Scotia,l-bfgs-b,4,0.6668274861262703
+Nova Scotia,l-bfgs-b,5,0.21357708381014412
+Nova Scotia,l-bfgs-b,6,1.062303711994323
+Nova Scotia,l-bfgs-b,7,1.4680984236663441
+Nova Scotia,l-bfgs-b,8,1.397061807817493
+Nova Scotia,l-bfgs-b,9,1.0866424271987423
+Nunavut,l-bfgs-b,0,0.0
+Nunavut,l-bfgs-b,1,0.0
+Nunavut,l-bfgs-b,2,0.0
+Nunavut,l-bfgs-b,3,0.0
+Nunavut,l-bfgs-b,4,0.0
+Nunavut,l-bfgs-b,5,0.0
+Nunavut,l-bfgs-b,6,0.0
+Nunavut,l-bfgs-b,7,0.0
+Nunavut,l-bfgs-b,8,0.0
+Nunavut,l-bfgs-b,9,0.0
+NWT,l-bfgs-b,0,0.0
+NWT,l-bfgs-b,1,0.0
+NWT,l-bfgs-b,2,0.0
+NWT,l-bfgs-b,3,0.0
+NWT,l-bfgs-b,4,0.0
+NWT,l-bfgs-b,5,0.0
+NWT,l-bfgs-b,6,0.0
+NWT,l-bfgs-b,7,0.0
+NWT,l-bfgs-b,8,0.0
+NWT,l-bfgs-b,9,0.0
+Ontario,l-bfgs-b,0,2068.9970575146076
+Ontario,l-bfgs-b,1,400.2087676904433
+Ontario,l-bfgs-b,2,250.48575912382634
+Ontario,l-bfgs-b,3,16.53561800651353
+Ontario,l-bfgs-b,4,13.25616636153764
+Ontario,l-bfgs-b,5,29.19185883764169
+Ontario,l-bfgs-b,6,15.560032754789669
+Ontario,l-bfgs-b,7,15.781897425518222
+Ontario,l-bfgs-b,8,10.640179240177334
+Ontario,l-bfgs-b,9,99.58679786271959
+PEI,l-bfgs-b,0,0.0
+PEI,l-bfgs-b,1,0.0
+PEI,l-bfgs-b,2,0.0
+PEI,l-bfgs-b,3,0.0
+PEI,l-bfgs-b,4,0.0
+PEI,l-bfgs-b,5,0.0
+PEI,l-bfgs-b,6,0.0
+PEI,l-bfgs-b,7,0.0
+PEI,l-bfgs-b,8,0.0
+PEI,l-bfgs-b,9,0.0
+Quebec,l-bfgs-b,0,293.0359180165871
+Quebec,l-bfgs-b,1,479.2269066041032
+Quebec,l-bfgs-b,2,92.23470656439979
+Quebec,l-bfgs-b,3,93.09352340590065
+Quebec,l-bfgs-b,4,890.5905724794517
+Quebec,l-bfgs-b,5,230.06074892233696
+Quebec,l-bfgs-b,6,150.36223803453146
+Quebec,l-bfgs-b,7,82.91513967241652
+Quebec,l-bfgs-b,8,52.89023429434877
+Quebec,l-bfgs-b,9,47.97609451889045
+Saskatchewan,l-bfgs-b,0,43.374366976457964
+Saskatchewan,l-bfgs-b,1,0.5370971804612119
+Saskatchewan,l-bfgs-b,2,1.6225234290639963
+Saskatchewan,l-bfgs-b,3,3.6392100797271376
+Saskatchewan,l-bfgs-b,4,0.6293872925483229
+Saskatchewan,l-bfgs-b,5,0.4350393540593944
+Saskatchewan,l-bfgs-b,6,2.637420317168984
+Saskatchewan,l-bfgs-b,7,3.4247024521510947
+Saskatchewan,l-bfgs-b,8,0.8398344703040327
+Saskatchewan,l-bfgs-b,9,1.6155702878795535
+Yukon,l-bfgs-b,0,0.0
+Yukon,l-bfgs-b,1,0.0
+Yukon,l-bfgs-b,2,0.0
+Yukon,l-bfgs-b,3,0.0
+Yukon,l-bfgs-b,4,0.0
+Yukon,l-bfgs-b,5,0.0
+Yukon,l-bfgs-b,6,0.0
+Yukon,l-bfgs-b,7,0.0
+Yukon,l-bfgs-b,8,0.0
+Yukon,l-bfgs-b,9,0.0
