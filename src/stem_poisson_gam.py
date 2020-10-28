@@ -111,29 +111,40 @@ class StemPoissonRegressor:
         Returns:
             pd.DataFrame: Dataframe containing 1 step predictions for all data in training set along with h step forecasts
         """
-        predictions = pd.DataFrame()
-
         # Get 1 step predictions for all values in training set
-        Y_cases_preds = self.poisson_gam_cases.predict(self.X_cases)
-        Y_removed_preds = self.poisson_gam_removed.predict(self.X_removed)
+        cases_preds = self.poisson_gam_cases.predict(self.X_cases)
+        removed_preds = self.poisson_gam_removed.predict(self.X_removed)
+        cases_ci = self.poisson_gam_cases.confidence_intervals(self.X_cases)
+        removed_ci = self.poisson_gam_removed.confidence_intervals(self.X_removed)
 
-        # Add to result dataframe
-        predictions["date"] = self.X_original["date"].iloc[1:]
-        predictions["cases_pred"] = Y_cases_preds
-        predictions["removed_pred"] = Y_removed_preds
-        predictions["active_cases_pred"] = np.nan
-        predictions["is_forecast"] = False
+        # Create result dataframe for training set data
+        forecasts = pd.DataFrame(
+            {
+                "date": self.X_original["date"].iloc[1:],
+                "cases_pred": cases_preds,
+                "removed_pred": removed_preds,
+                "active_cases_pred": np.nan,
+                "cases_ci_lower": cases_ci[:, 0],
+                "cases_ci_upper": cases_ci[:, 1],
+                "removed_ci_lower": removed_ci[:, 0],
+                "removed_ci_upper": removed_ci[:, 1],
+                "is_forecast": False,
+            }
+        )
 
         # Get h step predictions iteratively. Start with last actual known values of active cases and percent susceptible
         I = self.X_original["active_cases"].iloc[-1]
         Z = np.log(self.X_original["percent_susceptible"].iloc[-1])
-        date = predictions["date"].max()
+        date = forecasts["date"].max()
 
         for _ in range(h):
-            # Get predictions of next step
+            # Get predictions and CI for next step
             log_I = np.log(I + 1)
-            Y = self.poisson_gam_cases.predict(np.array([log_I, Z]).reshape(1, 2))[0]
+            x_cases = np.array([log_I, Z]).reshape(1, 2)
+            Y = self.poisson_gam_cases.predict(x_cases)[0]
             R = self.poisson_gam_removed.predict(log_I)[0]
+            Y_ci = self.poisson_gam_cases.confidence_intervals(x_cases)[0]
+            R_ci = self.poisson_gam_removed.confidence_intervals(log_I)[0]
 
             # Update next values of I, Z, C
             I = max(I + Y - R, 1)
@@ -142,15 +153,19 @@ class StemPoissonRegressor:
             date = date + timedelta(days=1)
 
             # Append predicted value at time t+h
-            predictions = predictions.append(
+            forecasts = forecasts.append(
                 {
                     "date": date,
                     "cases_pred": Y,
                     "removed_pred": R,
                     "active_cases_pred": I,
+                    "cases_ci_lower": Y_ci[0],
+                    "cases_ci_upper": Y_ci[1],
+                    "removed_ci_lower": R_ci[0],
+                    "removed_ci_upper": R_ci[1],
                     "is_forecast": True,
                 },
                 ignore_index=True,
             )
 
-        return predictions
+        return forecasts
