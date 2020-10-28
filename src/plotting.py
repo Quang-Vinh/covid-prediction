@@ -8,8 +8,73 @@ import pandas as pd
 import plotly.graph_objects as go
 
 
-def plot_predictions():
-    return
+def plot_predictions(
+    forecast_data: pd.DataFrame,
+    y_actual: str,
+    y_pred: str,
+    y_label: str,
+    title: str,
+):
+    """
+    [summary]
+
+    Args:
+        forecast_data (pd.DataFrame): [description]
+        y_actual (str): [description]
+        y_pred (str): [description]
+        y_label (str): [description]
+        title (str): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    # Set figure layout
+    layout = go.Layout(
+        title=title,
+        xaxis=dict(title="Date"),
+        yaxis=dict(title=y_label),
+        height=600,
+    )
+    fig = go.Figure(layout=layout)
+
+    # Add line for end of current known data
+    end_date = forecast_data.query("not is_forecast")["date"].max()
+    fig.update_layout(
+        shapes=[
+            dict(
+                type="line",
+                yref="paper",
+                y0=0,
+                y1=1,
+                xref="x",
+                x0=end_date,
+                x1=end_date,
+            )
+        ]
+    )
+
+    # Trace for actual data
+    fig.add_trace(
+        go.Scatter(
+            x=forecast_data["date"],
+            y=forecast_data[y_actual],
+            mode="lines",
+            name="Actual",
+        )
+    )
+
+    # Trace for predicted deaths
+    fig.add_trace(
+        go.Scatter(
+            x=forecast_data["date"],
+            y=forecast_data[y_pred],
+            mode="lines",
+            line={"dash": "dash"},
+            name="Predicted",
+        )
+    )
+
+    return fig
 
 
 def plot_mortality_predictions(mortality_pred: pd.DataFrame, title: str = ""):
