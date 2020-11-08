@@ -1,0 +1,261 @@
+province,method,fold,rmse
+Alberta,l-bfgs-b,0,254.17161904081638
+Alberta,l-bfgs-b,1,21.86288677217548
+Alberta,l-bfgs-b,2,10.292013438410688
+Alberta,l-bfgs-b,3,4.0529223543068635
+Alberta,l-bfgs-b,4,1.909976228567456
+Alberta,l-bfgs-b,5,12.597939254570019
+Alberta,l-bfgs-b,6,41.53839861617439
+Alberta,l-bfgs-b,7,47.969824445146344
+Alberta,l-bfgs-b,8,37.39615792771964
+Alberta,l-bfgs-b,9,33.85006272435107
+BC,l-bfgs-b,0,3.7384231871106155
+BC,l-bfgs-b,1,8.564010519673152
+BC,l-bfgs-b,2,12.60574030069983
+BC,l-bfgs-b,3,4.289236853039949
+BC,l-bfgs-b,4,4.545778617166118
+BC,l-bfgs-b,5,13.66749866573278
+BC,l-bfgs-b,6,13.403314781441125
+BC,l-bfgs-b,7,15.882245359866472
+BC,l-bfgs-b,8,51.03360355950257
+BC,l-bfgs-b,9,34.281879226552306
+Manitoba,l-bfgs-b,0,1.3468285894999197
+Manitoba,l-bfgs-b,1,1.1118420688589594
+Manitoba,l-bfgs-b,2,0.5362784252045893
+Manitoba,l-bfgs-b,3,0.5993060728772119
+Manitoba,l-bfgs-b,4,0.5057072910083172
+Manitoba,l-bfgs-b,5,0.467093435516376
+Manitoba,l-bfgs-b,6,0.5519097838095259
+Manitoba,l-bfgs-b,7,4.782523109122339
+Manitoba,l-bfgs-b,8,3.7178397755019352
+Manitoba,l-bfgs-b,9,7.027936531421747
+New Brunswick,l-bfgs-b,0,0.0
+New Brunswick,l-bfgs-b,1,0.0
+New Brunswick,l-bfgs-b,2,0.0
+New Brunswick,l-bfgs-b,3,1.3954814298487213
+New Brunswick,l-bfgs-b,4,7.931979085084852
+New Brunswick,l-bfgs-b,5,1.7702599576750806
+New Brunswick,l-bfgs-b,6,0.8673885534678681
+New Brunswick,l-bfgs-b,7,0.6326977962681585
+New Brunswick,l-bfgs-b,8,0.5872776053920125
+New Brunswick,l-bfgs-b,9,0.6213386552242841
+NL,l-bfgs-b,0,8.527553262884245
+NL,l-bfgs-b,1,1.2822216195280858
+NL,l-bfgs-b,2,0.9050177200734018
+NL,l-bfgs-b,3,0.6341936776726801
+NL,l-bfgs-b,4,0.4683089191654751
+NL,l-bfgs-b,5,0.4544738838397878
+NL,l-bfgs-b,6,0.4016288417233229
+NL,l-bfgs-b,7,0.5148002655217468
+NL,l-bfgs-b,8,0.6355974781561012
+NL,l-bfgs-b,9,0.4765276601929556
+Nova Scotia,l-bfgs-b,0,6.411338640088725
+Nova Scotia,l-bfgs-b,1,4195.135446226591
+Nova Scotia,l-bfgs-b,2,0.8867796546598526
+Nova Scotia,l-bfgs-b,3,0.3843154571274537
+Nova Scotia,l-bfgs-b,4,0.6668274861262703
+Nova Scotia,l-bfgs-b,5,0.21357708381014406
+Nova Scotia,l-bfgs-b,6,1.062303711994323
+Nova Scotia,l-bfgs-b,7,1.468098423666344
+Nova Scotia,l-bfgs-b,8,1.3970618078174928
+Nova Scotia,l-bfgs-b,9,1.0866424271987425
+Nunavut,l-bfgs-b,0,0.0
+Nunavut,l-bfgs-b,1,0.0
+Nunavut,l-bfgs-b,2,0.0
+Nunavut,l-bfgs-b,3,0.0
+Nunavut,l-bfgs-b,4,0.0
+Nunavut,l-bfgs-b,5,0.0
+Nunavut,l-bfgs-b,6,0.0
+Nunavut,l-bfgs-b,7,0.0
+Nunavut,l-bfgs-b,8,0.0
+Nunavut,l-bfgs-b,9,0.0
+NWT,l-bfgs-b,0,0.0
+NWT,l-bfgs-b,1,0.0
+NWT,l-bfgs-b,2,0.0
+NWT,l-bfgs-b,3,0.0
+NWT,l-bfgs-b,4,0.0
+NWT,l-bfgs-b,5,0.0
+NWT,l-bfgs-b,6,0.0
+NWT,l-bfgs-b,7,0.0
+NWT,l-bfgs-b,8,0.0
+NWT,l-bfgs-b,9,0.0
+Ontario,l-bfgs-b,0,2068.997057514608
+Ontario,l-bfgs-b,1,400.2087676904433
+Ontario,l-bfgs-b,2,250.48575912382637
+Ontario,l-bfgs-b,3,16.53561800651353
+Ontario,l-bfgs-b,4,13.25616636153764
+Ontario,l-bfgs-b,5,29.191858837641693
+Ontario,l-bfgs-b,6,15.560032754789667
+Ontario,l-bfgs-b,7,15.781897425518222
+Ontario,l-bfgs-b,8,10.640179240177334
+Ontario,l-bfgs-b,9,99.58679786271959
+PEI,l-bfgs-b,0,0.0
+PEI,l-bfgs-b,1,0.0
+PEI,l-bfgs-b,2,0.0
+PEI,l-bfgs-b,3,0.0
+PEI,l-bfgs-b,4,0.0
+PEI,l-bfgs-b,5,0.0
+PEI,l-bfgs-b,6,0.0
+PEI,l-bfgs-b,7,0.0
+PEI,l-bfgs-b,8,0.0
+PEI,l-bfgs-b,9,0.0
+Quebec,l-bfgs-b,0,293.0359180165871
+Quebec,l-bfgs-b,1,479.2269066041032
+Quebec,l-bfgs-b,2,92.2347065643998
+Quebec,l-bfgs-b,3,93.09352340590065
+Quebec,l-bfgs-b,4,890.5905724794518
+Quebec,l-bfgs-b,5,230.06074892233696
+Quebec,l-bfgs-b,6,150.36223803453146
+Quebec,l-bfgs-b,7,82.91513967241652
+Quebec,l-bfgs-b,8,52.89023429434877
+Quebec,l-bfgs-b,9,47.976094518890456
+Saskatchewan,l-bfgs-b,0,43.37436697645797
+Saskatchewan,l-bfgs-b,1,0.5370971804612119
+Saskatchewan,l-bfgs-b,2,1.6225234290639965
+Saskatchewan,l-bfgs-b,3,3.6392100797271376
+Saskatchewan,l-bfgs-b,4,0.6293872925483229
+Saskatchewan,l-bfgs-b,5,0.4350393540593944
+Saskatchewan,l-bfgs-b,6,2.6374203171689836
+Saskatchewan,l-bfgs-b,7,3.4247024521510947
+Saskatchewan,l-bfgs-b,8,0.8398344703040327
+Saskatchewan,l-bfgs-b,9,1.6155702878795537
+Yukon,l-bfgs-b,0,0.0
+Yukon,l-bfgs-b,1,0.0
+Yukon,l-bfgs-b,2,0.0
+Yukon,l-bfgs-b,3,0.0
+Yukon,l-bfgs-b,4,0.0
+Yukon,l-bfgs-b,5,0.0
+Yukon,l-bfgs-b,6,0.0
+Yukon,l-bfgs-b,7,0.0
+Yukon,l-bfgs-b,8,0.0
+Yukon,l-bfgs-b,9,0.0
+Alberta,bayesian_opt,0,421.82034610715004
+Alberta,bayesian_opt,1,1292.1924044651494
+Alberta,bayesian_opt,2,1979.8342280432867
+Alberta,bayesian_opt,3,2349.4162650559583
+Alberta,bayesian_opt,4,2535.3200356842167
+Alberta,bayesian_opt,5,2617.4126451668926
+Alberta,bayesian_opt,6,2627.573813138552
+Alberta,bayesian_opt,7,2627.271784833937
+Alberta,bayesian_opt,8,2633.2845365851827
+Alberta,bayesian_opt,9,2635.245317254084
+BC,bayesian_opt,0,400.60959648897006
+BC,bayesian_opt,1,1275.262587256724
+BC,bayesian_opt,2,1960.771914501864
+BC,bayesian_opt,3,2330.5898196049798
+BC,bayesian_opt,4,2514.646173590963
+BC,bayesian_opt,5,2596.6533786499785
+BC,bayesian_opt,6,2637.6405688577247
+BC,bayesian_opt,7,2657.4842911773644
+BC,bayesian_opt,8,2667.3891791322517
+BC,bayesian_opt,9,2669.507286278418
+Manitoba,bayesian_opt,0,463.3835067604853
+Manitoba,bayesian_opt,1,1384.4623511377704
+Manitoba,bayesian_opt,2,2106.142478943131
+Manitoba,bayesian_opt,3,2490.6424851664947
+Manitoba,bayesian_opt,4,2682.586502600859
+Manitoba,bayesian_opt,5,2778.764179143334
+Manitoba,bayesian_opt,6,2824.6409817471817
+Manitoba,bayesian_opt,7,2847.803215721998
+Manitoba,bayesian_opt,8,2868.132017419123
+Manitoba,bayesian_opt,9,2883.771516005843
+New Brunswick,bayesian_opt,0,467.7566599543317
+New Brunswick,bayesian_opt,1,1390.837171447796
+New Brunswick,bayesian_opt,2,2113.1236345233397
+New Brunswick,bayesian_opt,3,2496.409569839941
+New Brunswick,bayesian_opt,4,2687.58599568771
+New Brunswick,bayesian_opt,5,2783.7640614431984
+New Brunswick,bayesian_opt,6,2830.6938387163646
+New Brunswick,bayesian_opt,7,2858.4908899302613
+New Brunswick,bayesian_opt,8,2882.343185862182
+New Brunswick,bayesian_opt,9,2904.6718134299776
+NL,bayesian_opt,0,465.2076606411224
+NL,bayesian_opt,1,1387.8978100952183
+NL,bayesian_opt,2,2110.131695414519
+NL,bayesian_opt,3,2494.6405682195173
+NL,bayesian_opt,4,2686.5860969194005
+NL,bayesian_opt,5,2782.7640849493896
+NL,bayesian_opt,6,2829.69384422427
+NL,bayesian_opt,7,2857.4908930986635
+NL,bayesian_opt,8,2881.343188485305
+NL,bayesian_opt,9,2903.197233462774
+Nova Scotia,bayesian_opt,0,461.6793152016334
+Nova Scotia,bayesian_opt,1,1354.5241705938465
+Nova Scotia,bayesian_opt,2,2056.2032386954106
+Nova Scotia,bayesian_opt,3,2436.226813653442
+Nova Scotia,bayesian_opt,4,2626.6949885815648
+Nova Scotia,bayesian_opt,5,2722.765526917982
+Nova Scotia,bayesian_opt,6,2768.7465085273197
+Nova Scotia,bayesian_opt,7,2795.858512298512
+Nova Scotia,bayesian_opt,8,2819.343354753088
+Nova Scotia,bayesian_opt,9,2841.6719662552487
+Nunavut,bayesian_opt,0,467.7566599543317
+Nunavut,bayesian_opt,1,1390.837171447796
+Nunavut,bayesian_opt,2,2113.1236345233397
+Nunavut,bayesian_opt,3,2497.639134537712
+Nunavut,bayesian_opt,4,2689.585793450146
+Nunavut,bayesian_opt,5,2785.7640144814445
+Nunavut,bayesian_opt,6,2832.6938277122194
+Nunavut,bayesian_opt,7,2860.4908836001027
+Nunavut,bayesian_opt,8,2884.3431806213925
+Nunavut,bayesian_opt,9,2906.671808686875
+NWT,bayesian_opt,0,467.7566599543317
+NWT,bayesian_opt,1,1390.837171447796
+NWT,bayesian_opt,2,2113.1236345233397
+NWT,bayesian_opt,3,2497.639134537712
+NWT,bayesian_opt,4,2689.585793450146
+NWT,bayesian_opt,5,2785.7640144814445
+NWT,bayesian_opt,6,2832.6938277122194
+NWT,bayesian_opt,7,2860.4908836001027
+NWT,bayesian_opt,8,2884.3431806213925
+NWT,bayesian_opt,9,2906.671808686875
+Ontario,bayesian_opt,0,20.506465370638484
+Ontario,bayesian_opt,1,41.76636027988409
+Ontario,bayesian_opt,2,16.865112065535847
+Ontario,bayesian_opt,3,18.403080782438693
+Ontario,bayesian_opt,4,16.877149561784087
+Ontario,bayesian_opt,5,10.214621949566313
+Ontario,bayesian_opt,6,14.150442660859387
+Ontario,bayesian_opt,7,22.75722388885225
+Ontario,bayesian_opt,8,25.327421847515748
+Ontario,bayesian_opt,9,85.58216381723358
+PEI,bayesian_opt,0,467.7566599543317
+PEI,bayesian_opt,1,1390.837171447796
+PEI,bayesian_opt,2,2113.1236345233397
+PEI,bayesian_opt,3,2497.639134537712
+PEI,bayesian_opt,4,2689.585793450146
+PEI,bayesian_opt,5,2785.7640144814445
+PEI,bayesian_opt,6,2832.6938277122194
+PEI,bayesian_opt,7,2860.4908836001027
+PEI,bayesian_opt,8,2884.3431806213925
+PEI,bayesian_opt,9,2906.671808686875
+Quebec,bayesian_opt,0,191.3485190047417
+Quebec,bayesian_opt,1,889.374705215837
+Quebec,bayesian_opt,2,1790.164717751821
+Quebec,bayesian_opt,3,2571.100131355301
+Quebec,bayesian_opt,4,2806.906202620099
+Quebec,bayesian_opt,5,2860.0400219767084
+Quebec,bayesian_opt,6,2857.6456459764822
+Quebec,bayesian_opt,7,2883.684556212422
+Quebec,bayesian_opt,8,2897.6721176578817
+Quebec,bayesian_opt,9,2960.1418786058157
+Saskatchewan,bayesian_opt,0,464.3347828127162
+Saskatchewan,bayesian_opt,1,1385.25356860068
+Saskatchewan,bayesian_opt,2,2105.5092770615825
+Saskatchewan,bayesian_opt,3,2485.356351195304
+Saskatchewan,bayesian_opt,4,2676.105874276393
+Saskatchewan,bayesian_opt,5,2770.4990850936906
+Saskatchewan,bayesian_opt,6,2813.7430923700863
+Saskatchewan,bayesian_opt,7,2837.488932293366
+Saskatchewan,bayesian_opt,8,2860.3432439945755
+Saskatchewan,bayesian_opt,9,2882.6190534716407
+Yukon,bayesian_opt,0,467.7566599543317
+Yukon,bayesian_opt,1,1390.837171447796
+Yukon,bayesian_opt,2,2113.1236345233397
+Yukon,bayesian_opt,3,2497.639134537712
+Yukon,bayesian_opt,4,2689.585793450146
+Yukon,bayesian_opt,5,2785.7640144814445
+Yukon,bayesian_opt,6,2832.6938277122194
+Yukon,bayesian_opt,7,2860.4908836001027
+Yukon,bayesian_opt,8,2884.3431806213925
+Yukon,bayesian_opt,9,2906.671808686875
