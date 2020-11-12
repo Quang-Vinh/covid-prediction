@@ -13,6 +13,7 @@ def plot_predictions(
     y: str,
     y_label: str,
     title: str,
+    height: int = 400,
     include_ci: bool = False,
 ):
     """
@@ -23,6 +24,7 @@ def plot_predictions(
         y (str): Name of column in forecast dataframe to plot
         y_label (str): Y label axis on plot
         title (str): Plot title
+        height (int): Plot layout height
         include_ci (bool, optional): Whether to include confidence intervals in plot. Defaults to False.
 
     Returns:
@@ -35,12 +37,12 @@ def plot_predictions(
         title=title,
         xaxis=dict(title="Date"),
         yaxis=dict(title=y_label),
-        height=600,
+        height=height,
     )
     fig = go.Figure(layout=layout)
 
     # Add line for end of current known data
-    end_date = forecast_data.query("not is_forecast")["date"].max()
+    end_date = forecast_data.loc[forecast_data["is_forecast"] == False]["date"].max()
     fig.update_layout(
         shapes=[
             dict(
