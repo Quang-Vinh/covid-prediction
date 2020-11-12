@@ -20,7 +20,7 @@ from typing import Tuple
 
 from region_model import RegionModel
 from simulation import run
-from utils import str_to_date, remove_space_region
+from util import str_to_date, remove_space_region
 
 current_path = Path(__file__).parent
 
