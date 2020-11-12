@@ -23,6 +23,14 @@ def get_covid_data(type: str, level: str = "canada") -> pd.DataFrame:
     repo_url = "https://raw.githubusercontent.com/ishaberry/Covid19Canada/master"
     data_url = f"{repo_url}/timeseries_{level}/{type}_timeseries_{level}.csv"
     covid_data = pd.read_csv(data_url)
+
+    # Convert date to date type
+    format = "%d-%m-%Y"
+    date_col = covid_data.filter(regex="^date").columns[0]
+    covid_data = covid_data.assign(
+        **{date_col: (lambda x: pd.to_datetime(x[date_col], format=format).dt.date)}
+    ).rename(columns={date_col: "date"})
+
     return covid_data
 
 
@@ -57,21 +65,14 @@ def get_all_covid_data(level: str = "canada") -> pd.DataFrame:
         .loc[:, ["province", "population"]]
     )
 
-    # Preprocessing dataframes to be merged
-    recovered_data = recovered_data.rename(columns={"date_recovered": "date"}).loc[
-        :, ["province", "date", "recovered"]
-    ]
-    mortality_data = mortality_data.rename(columns={"date_death_report": "date"}).loc[
-        :, ["province", "date", "deaths"]
-    ]
-    cases_data = cases_data.rename(columns={"date_report": "date"}).loc[
-        :, ["province", "date", "cases"]
-    ]
+    # Select columns of dataframes to be merged with
+    recovered_data = recovered_data.loc[:, ["province", "date", "recovered"]]
+    mortality_data = mortality_data.loc[:, ["province", "date", "deaths"]]
+    cases_data = cases_data.loc[:, ["province", "date", "cases"]]
 
     # Preprocessing
-    format = "%d-%m-%Y"
     all_covid_data = (
-        active_cases_data.rename(columns={"date_active": "date"})
+        active_cases_data
         # Merge deaths and recovered data
         .merge(mortality_data, how="left", on=["province", "date"])
         .merge(recovered_data, how="left", on=["province", "date"])
@@ -82,10 +83,7 @@ def get_all_covid_data(level: str = "canada") -> pd.DataFrame:
             deaths=lambda x: x["deaths"].astype(int),
             recovered=lambda x: x["recovered"].astype(int),
         )
-        # Format date and remove non province
-        .assign(
-            date=lambda x: pd.to_datetime(x["date"], format=format).dt.date,
-        )
+        # Remove non province data
         .query('province != "Repatriated"')
         # Add population data per province
         .merge(province_populations, how="left", on="province")
