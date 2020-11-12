@@ -28,13 +28,13 @@ def get_covid_data(type: str, level: str = "canada") -> pd.DataFrame:
 
 def get_all_covid_data(level: str = "canada") -> pd.DataFrame:
     """
-    [summary]
+    Gets all covid data and variables from https://github.com/ishaberry/Covid19Canada
 
     Args:
-        level (str, optional): [description]. Defaults to "canada".
+        level (str, optional): Level of data to retrieve either prov or canada. Defaults to "canada".
 
     Returns:
-        pd.DataFrame: [description]
+        pd.DataFrame: Covid19 time series data
     """
     # Read in data
     cases_data = get_covid_data(type="cases", level=level)
