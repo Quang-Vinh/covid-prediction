@@ -172,20 +172,21 @@ def predict(region_model: RegionModel, mortality_data: pd.DataFrame) -> pd.DataF
     cumulative_deaths_pred = deaths.cumsum()
     mortality_pred = pd.DataFrame(
         {
-            "date_death_report": dates,
+            "date": dates,
             "infections_pred": infections,
             "hospitalizations_pred": hospitalizations,
             "cumulative_deaths_pred": cumulative_deaths_pred,
+            'deaths_pred': deaths
         }
     )
 
-    # Cut off 22 days before first death reports
-    start_date = mortality_data["date_death_report"].min()
-    mortality_pred = mortality_pred.query("date_death_report >= @start_date")
+    # Cut off days before first death reports
+    start_date = mortality_data["date"].min()
+    mortality_pred = mortality_pred.query("date >= @start_date")
 
     # Combine predictions with actual data
     mortality_pred = mortality_pred.merge(
-        mortality_data, how="left", on="date_death_report"
+        mortality_data, how="left", on="date"
     )
     mortality_pred.loc[:, "province"] = mortality_data.iloc[0]["province"]
 
