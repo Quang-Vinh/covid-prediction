@@ -4,7 +4,7 @@
 # Modeling
 import numpy as np
 import pandas as pd
-from pygam import PoissonGAM, l
+from pygam import PoissonGAM, s, l
 
 # Built-ins
 from datetime import timedelta
@@ -109,15 +109,21 @@ class StemPoissonRegressor:
     """
 
     def __init__(
-        self, verbose: bool = False, lam_main: float = 0.6, lam_other: float = 10
+        self,
+        verbose: bool = False,
+        use_splines: bool = False,
+        lam_main: float = 0.6,
+        lam_other: float = 10,
     ) -> None:
         """
         Args:
             verbose (bool, optional): Whether to print messages on fit. Defaults to False.
+            use_spline (bool, optional): Whether to use splines in the GAM model, if false then linear terms are used instead. Defaults to False.
             lam_main (float, optional): Lambda for regularization of main province effects. Defaults to 0.6
             lam_other (float, optional): Lambda for regularization of other province effects. Defaults to 1.
         """
         self.verbose = verbose
+        self.use_splines = use_splines
         self.lam_main = lam_main
         self.lam_other = lam_other
         return
@@ -161,10 +167,19 @@ class StemPoissonRegressor:
             )
             self.Y_cases[province] = Y_province["cases"]
 
-            # Add terms for each province I_t-1 and Z_t-1
-            terms = l(0, lam=self.lam_main) + l(1, lam=self.lam_main)
-            for i in range(1, len(self.provinces)):
-                terms += l(i * 2, lam=self.lam_other) + l(i * 2 + 1, lam=self.lam_other)
+            # Add terms for each province I_t-1 and Z_t-1. Either splines or linear terms
+            if self.use_splines:
+                terms = s(0, lam=self.lam_main) + s(1, lam=self.lam_main)
+                for i in range(1, len(self.provinces)):
+                    terms += s(i * 2, lam=self.lam_other) + s(
+                        i * 2 + 1, lam=self.lam_other
+                    )
+            else:
+                terms = l(0, lam=self.lam_main) + l(1, lam=self.lam_other)
+                for i in range(1, len(self.provinces)):
+                    terms += l(i * 2, lam=self.lam_other) + l(
+                        i * 2 + 1, lam=self.lam_other
+                    )
 
             # Fit cases model for province
             cases_model = PoissonGAM(terms, verbose=self.verbose)
@@ -270,7 +285,10 @@ class StemPoissonRegressor:
                 # Get predictions for current province
                 x_cases = np.array(x_cases).reshape(1, len(self.provinces) * 2)
                 x_removed = np.array(x_removed).reshape(1, len(self.provinces))
-                Y = self.poisson_gam_cases[province].predict(x_cases)[0]
+                try:
+                    Y = self.poisson_gam_cases[province].predict(x_cases)[0]
+                except:
+                    print(x_cases)
                 R = self.poisson_gam_removed[province].predict(x_removed)[0]
 
                 # Update next values of I, Z, C
