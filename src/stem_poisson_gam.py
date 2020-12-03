@@ -10,12 +10,15 @@ from pygam import PoissonGAM, s, l
 from datetime import timedelta
 
 
-def preprocess_data(X: pd.DataFrame, drop_first_day: bool = False) -> pd.DataFrame:
+def preprocess_data(
+    X: pd.DataFrame, add_province_columns: bool = False, drop_first_day: bool = False
+) -> pd.DataFrame:
     """
-    Preprocess data to be used in StemPoissonRegressor by adding columns for all regions as predictors
+    Preprocess data to be used in StemPoissonRegressor by adding columns for previous day information and also adding columns for all regions as predictors
 
     Args:
         X (pd.DataFrame): Dataframe with columns province, date, active_cases, percent_susceptible
+        add_province_columns (bool, optional): If variables active_cases and percent_susceptible should be added as columns for each province. Defaults to False.
         drop_first_day (bool, optional): Whether to drop first day of each province or not. Defaults to False.
 
     Returns:
@@ -49,41 +52,190 @@ def preprocess_data(X: pd.DataFrame, drop_first_day: bool = False) -> pd.DataFra
     )
 
     # Add previous day columns for each province
-    combined = X.copy()
-    provinces = combined["province"].unique()
-    for province in provinces:
-        # Get province data rows and duplicate n times for concat column wise
-        prov_data = X.query("province == @province").loc[
-            :,
-            [
-                "active_cases_yesterday",
-                "percent_susceptible_yesterday",
-                "log_active_cases_yesterday",
-                "log_percent_susceptible_yesterday",
-                "active_cases",
-                "percent_susceptible",
-                "log_active_cases",
-                "log_percent_susceptible",
-            ],
-        ]
-        prov_data = pd.concat([prov_data] * len(provinces), ignore_index=True)
+    X_new = X.copy()
+    if add_province_columns:
+        provinces = X_new["province"].unique()
+        for province in provinces:
+            # Get province data rows and duplicate n times for concat column wise
+            prov_data = X.query("province == @province").loc[
+                :,
+                [
+                    "active_cases_yesterday",
+                    "percent_susceptible_yesterday",
+                    "log_active_cases_yesterday",
+                    "log_percent_susceptible_yesterday",
+                    "active_cases",
+                    "percent_susceptible",
+                    "log_active_cases",
+                    "log_percent_susceptible",
+                ],
+            ]
+            prov_data = pd.concat([prov_data] * len(provinces), ignore_index=True)
 
-        # Append name of province to each column name
-        for col in prov_data.columns:
-            prov_data.rename(columns={col: f"{province}_{col}"}, inplace=True)
+            # Append name of province to each column name
+            for col in prov_data.columns:
+                prov_data.rename(columns={col: f"{province}_{col}"}, inplace=True)
 
-        combined = pd.concat([combined, prov_data], axis=1)
+            X_new = pd.concat([X_new, prov_data], axis=1)
 
     # Drop first days missing t-1 information
     if drop_first_day:
-        combined = combined.query("active_cases_yesterday == active_cases_yesterday")
+        X_new = X_new.query("active_cases_yesterday == active_cases_yesterday")
 
-    combined.reset_index(drop=True, inplace=True)
+    X_new.reset_index(drop=True, inplace=True)
 
-    return combined
+    return X_new
 
 
 class StemPoissonRegressor:
+    """
+    Space-Time Epidemic model based on "Spatiotemporal Dynamics, Nowcasting and Forecasting of COVID-19 in the United States" (https://arxiv.org/abs/2004.14103)
+    Fits two Poisson regression models to model the new cases and new deaths/recovered at time t.
+
+    The first model for the new cases Y_t is modelled using the active cases I_t-1 and number of susceptible people S_t-1
+    Y_t \sim Poisson(\mu_t) \\
+    log(\mu_t) = \beta_{1t} + \beta_{2t}log(I_{t-1} + 1) + \alpha_tlog(S_{t-1}/N)   
+
+    The second model for the new deaths/recovered \Delta D_t is modelled using the active cases I_t-1
+    \Delta D_t \sim Poisson({\mu_t}^D) \\
+    log({\mu_t}^D) = \beta_{1t}^D + \beta_{2t}^D log(I_{t-1} + 1)
+
+    Attributes:
+        X_original {pandas dataframe} -- Original X dataframe called on fit()
+        Y_original {pandas dataframe} -- Original Y dataframe called on fit()
+        X_cases {pandas dataframe} -- Transformed X dataframe used for fitting new cases model
+        Y_case {pandas dataframe} -- Y dataframe used for fitting new cases model
+        X_removed {pandas dataframe} -- Transformed X dataframe used for fitting new removed model
+        Y_removed {pandas dataframe} -- Y dataframe used for fitting new removed model
+        poisson_gam_cases {PoissonGAM model} -- Poisson regression model for new cases
+        poisson_gam_removed {PoissonGAM model} -- Poisson regression model for new removed 
+    """
+
+    def __init__(self, verbose: bool = False, use_spline: bool = False) -> None:
+        """
+        Args:
+            verbose (bool, optional): Whether to print messages on fit. Defaults to False.
+            use_spline (bool, optional): Whether to use splines in the GAM model, if false then linear terms are used instead. Defaults to False.
+        """
+        self.verbose = verbose
+        self.use_spline = use_spline
+        return
+
+    def fit(
+        self,
+        X: pd.DataFrame,
+        Y: pd.DataFrame,
+    ):
+        """
+        Fit a poisson regression model each for the cases using active_cases and percentage_susceptible at time t-1, and another model
+        for removed using active_cases at time t-1.
+        Args:
+            X (pd.DataFrame): Dataframe for given region of predictor variables containing columns date, active_cases, percent_susceptible
+            Y (pd.DataFrame): Dataframe for given region of response variables containing columns cases, removed
+        """
+        self.X_original = X.copy()
+        self.Y_original = Y.copy()
+
+        # Separate data for each model
+        self.X_cases = X[
+            ["log_active_cases_yesterday", "log_percent_susceptible_yesterday"]
+        ]
+        self.Y_cases = Y["cases"]
+        self.X_removed = X[["log_active_cases_yesterday"]]
+        self.Y_removed = Y["removed"]
+
+        # Model new cases data using infections and percentage susceptible at time t-1
+        if self.use_spline:
+            terms_cases = s(0) + s(1)
+            terms_removed = s(0)
+        else:
+            terms_cases = l(0) + l(1)
+            terms_removed = l(0)
+
+        self.poisson_gam_cases = PoissonGAM(terms_cases, verbose=self.verbose)
+        self.poisson_gam_cases.fit(self.X_cases, self.Y_cases)
+
+        # Model removed cases using infections at time t-1
+        self.poisson_gam_removed = PoissonGAM(terms_removed, verbose=self.verbose)
+        self.poisson_gam_removed.fit(self.X_removed, self.Y_removed)
+
+        return
+
+    def forecast(self, h: int = 1) -> pd.DataFrame:
+        """
+        Gives forecasted new cases, active cases, and cumulative number of removed.
+        Args:
+            h (int, optional): Number of h step predictions to make. Defaults to 1.
+        Returns:
+            pd.DataFrame: Dataframe containing 1 step predictions for all data in training set along with h step forecasts
+        """
+        province = self.X_original["province"].iloc[-1]
+
+        # Get 1 step predictions for all values in training set
+        cases_preds = self.poisson_gam_cases.predict(self.X_cases)
+        removed_preds = self.poisson_gam_removed.predict(self.X_removed)
+        cases_ci = self.poisson_gam_cases.confidence_intervals(self.X_cases)
+        removed_ci = self.poisson_gam_removed.confidence_intervals(self.X_removed)
+
+        # Create result dataframe for training set data
+        forecasts = pd.DataFrame(
+            {
+                "date": self.X_original["date"],
+                "province": province,
+                "cases_pred": cases_preds,
+                "removed_pred": removed_preds,
+                "active_cases_pred": np.nan,
+                "cases_ci_lower": cases_ci[:, 0],
+                "cases_ci_upper": cases_ci[:, 1],
+                "removed_ci_lower": removed_ci[:, 0],
+                "removed_ci_upper": removed_ci[:, 1],
+                "is_forecast": False,
+            }
+        )
+
+        # Get h step predictions iteratively. Start with last actual known values of active cases and percent susceptible
+        C = self.X_original["cumulative_cases"].iloc[-1]
+        N = self.X_original["population"].iloc[-1]
+        I = self.X_original["active_cases"].iloc[-1]
+        Z = np.log(self.X_original["percent_susceptible"].iloc[-1])
+        date = forecasts["date"].max()
+
+        for _ in range(h):
+            # Get predictions and CI for next step
+            log_I = np.log(I + 1)
+            x_cases = np.array([log_I, Z]).reshape(1, 2)
+            Y = self.poisson_gam_cases.predict(x_cases)[0]
+            R = self.poisson_gam_removed.predict(log_I)[0]
+            Y_ci = self.poisson_gam_cases.confidence_intervals(x_cases)[0]
+            R_ci = self.poisson_gam_removed.confidence_intervals(log_I)[0]
+
+            # Update next values of I, Z, C
+            I = max(I + Y - R, 1)
+            C = C + Y
+            Z = np.log((N - C) / N)
+            date = date + timedelta(days=1)
+
+            # Append predicted value at time t+h
+            forecasts = forecasts.append(
+                {
+                    "date": date,
+                    "province": province,
+                    "cases_pred": Y,
+                    "removed_pred": R,
+                    "active_cases_pred": I,
+                    "cases_ci_lower": Y_ci[0],
+                    "cases_ci_upper": Y_ci[1],
+                    "removed_ci_lower": R_ci[0],
+                    "removed_ci_upper": R_ci[1],
+                    "is_forecast": True,
+                },
+                ignore_index=True,
+            )
+
+        return forecasts
+
+
+class StemPoissonRegressorCombined:
     """
     Space-Time Epidemic model based on "Spatiotemporal Dynamics, Nowcasting and Forecasting of COVID-19 in the United States" (https://arxiv.org/abs/2004.14103)
     Fits two Poisson regression models to model the new cases and new deaths/recovered at time t.
@@ -105,7 +257,6 @@ class StemPoissonRegressor:
         Y_removed {pandas dataframe} -- Dictionary containing Y dataframe used for fitting new removed model for each province
         poisson_gam_cases {PoissonGAM model} -- Dictionary of Poisson regression model for new cases for each province
         poisson_gam_removed {PoissonGAM model} -- Dictionary of Poisson regression model for new removed for each province
-
     """
 
     def __init__(
