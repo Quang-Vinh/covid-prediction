@@ -2,6 +2,8 @@
 
 """
 Script train a Poisson GAM model to forecast new cases and removed for each province
+
+Arguments: h (int) - Number of days to forecast
 """
 
 
@@ -18,12 +20,8 @@ import pandas as pd
 from stem_poisson_gam import preprocess_data, StemPoissonRegressor
 from utils import get_all_covid_data
 
-
-# Output path
-output_path = Path(__file__).parent / "../output/"
-
-# Number of days to forecast
-h = 21
+current_dir = Path(__file__).resolve().parent
+output_path = current_dir / "../output/"
 
 
 def main(h: int):
