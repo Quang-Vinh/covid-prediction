@@ -1,6 +1,9 @@
 # Jupyter lab
 .virtual_documents
 
+# All outputs
+/output/*
+
 # References
 /references/*.mp4
 

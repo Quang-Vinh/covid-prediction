@@ -5,17 +5,26 @@ Module for getting data from https://github.com/ishaberry/Covid19Canada
 """
 
 
+# Built-ins
+from pathlib import Path
+
 # Other
 import pandas as pd
 
+# Current file path
+cur_dir = Path(__file__).parent
 
-def get_covid_data(type: str, level: str = "canada") -> pd.DataFrame:
+
+def get_covid_data(
+    type: str, level: str = "canada", preprocess: bool = False
+) -> pd.DataFrame:
     """
     Gets up to date Canada covid data from https://github.com/ishaberry/Covid19Canada
 
     Args:
         type (str): Type of data to retrieve. Options are active, cases, mortality, recovered, and testing
         level (str, optional): Level of data to retrieve. Options are prov or canada. Defaults to "canada".
+        preprocess (bool, optional): Whether to clean errors in data. Defaults to False
 
     Returns:
         pd.DataFrame: Covid19 time series data
@@ -31,24 +40,35 @@ def get_covid_data(type: str, level: str = "canada") -> pd.DataFrame:
         **{date_col: (lambda x: pd.to_datetime(x[date_col], format=format).dt.date)}
     ).rename(columns={date_col: "date"})
 
+    # Optionally removed negative recovered values
+    if preprocess and type == "recovered":
+        covid_data = covid_data.assign(recovered=lambda x: x["recovered"].clip(lower=0))
+
     return covid_data
 
 
-def get_all_covid_data(level: str = "canada") -> pd.DataFrame:
+def get_all_covid_data(level: str = "canada", preprocess: bool = False) -> pd.DataFrame:
     """
     Gets all covid data and variables from https://github.com/ishaberry/Covid19Canada
 
     Args:
         level (str, optional): Level of data to retrieve either prov or canada. Defaults to "canada".
+        preprocess (bool, optional): Whether to clean errors in data. Defaults to False
 
     Returns:
         pd.DataFrame: Covid19 time series data
     """
     # Read in data
-    cases_data = get_covid_data(type="cases", level=level)
-    active_cases_data = get_covid_data(type="active", level=level)
-    mortality_data = get_covid_data(type="mortality", level=level)
-    recovered_data = get_covid_data(type="recovered", level=level)
+    cases_data = get_covid_data(type="cases", level=level, preprocess=preprocess)
+    active_cases_data = get_covid_data(
+        type="active", level=level, preprocess=preprocess
+    )
+    mortality_data = get_covid_data(
+        type="mortality", level=level, preprocess=preprocess
+    )
+    recovered_data = get_covid_data(
+        type="recovered", level=level, preprocess=preprocess
+    )
 
     # Province population data
     prov_map = {
@@ -59,7 +79,7 @@ def get_all_covid_data(level: str = "canada") -> pd.DataFrame:
     }
 
     province_populations = (
-        pd.read_csv("../data/canada_prov_population.csv")
+        pd.read_csv(cur_dir / "../data/canada_prov_population.csv")
         .rename(columns={"GEO": "province", "VALUE": "population"})
         .replace({"province": prov_map})
         .loc[:, ["province", "population"]]
