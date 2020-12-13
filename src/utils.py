@@ -110,6 +110,8 @@ def get_all_covid_data(level: str = "canada", preprocess: bool = False) -> pd.Da
         # Add transformed variables
         .assign(
             removed=lambda x: x["recovered"] + x["deaths"],
+            cumulative_removed=lambda x: x["cumulative_recovered"]
+            + x["cumulative_deaths"],
             susceptible=lambda x: x["population"] - x["cumulative_cases"],
             percent_susceptible=lambda x: x["susceptible"] / x["population"],
         )
