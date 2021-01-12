@@ -7,7 +7,8 @@ import pandas as pd
 from pygam import PoissonGAM, s, l
 
 # Built-ins
-from datetime import timedelta
+from datetime import date, timedelta
+from typing import List
 
 
 def preprocess_data(
@@ -87,6 +88,55 @@ def preprocess_data(
     return X_new
 
 
+def split_columns_dates(
+    df: pd.DataFrame, date_splits: List[date], drop_date: bool = False
+):
+    """
+    Split all columns in df into several columns partitioned by date. For example if date_splits is [January 1 2020, January 10 2020, January 20 2020] then
+
+    each column of df is split into 3 columns where col_0 has values for Jan 1 2020 to Jan 10 2020 and is 0 every else, ..., and col_2 has values for Jan 20 2020 and onwards.
+
+    Args:
+        df (pd.DataFrame): Dataframe with at least a date column.
+        date_splits (List[date]): List of dates for bounds.
+        drop_date (bool): Whether to keep date column in result dataframe. Defaults to False.
+
+    Returns:
+        [pd.DataFrame]: Dataframe df with columns split by dates
+    """
+    df = df.copy()
+
+    cols = list(df.columns)
+    cols.remove("date")
+
+    # Split each column by each date bound
+    for col in cols:
+        for i in range(len(date_splits)):
+
+            # Get bounds for dates
+            start_date = date_splits[i]
+
+            if i == len(date_splits) - 1:
+                end_date = df["date"].max() + timedelta(days=10)
+            else:
+                end_date = date_splits[i + 1] - timedelta(days=1)
+
+            # Add new column to df where between date bounds there are values and everywhere else is 0
+            col_name = f"{col}_{i}"
+            col_values = df[col].copy()
+            date_index = ~df["date"].between(start_date, end_date)
+            col_values.loc[date_index] = 0
+
+            df.insert(1, col_name, col_values)
+
+        df = df.drop(col, axis=1)
+
+    if drop_date:
+        df = df.drop("date", axis=1)
+
+    return df
+
+
 class StemPoissonRegressor:
     """
     Space-Time Epidemic model based on "Spatiotemporal Dynamics, Nowcasting and Forecasting of COVID-19 in the United States" (https://arxiv.org/abs/2004.14103)
@@ -111,13 +161,20 @@ class StemPoissonRegressor:
         poisson_gam_removed {PoissonGAM model} -- Poisson regression model for new removed 
     """
 
-    def __init__(self, verbose: bool = False, use_spline: bool = False) -> None:
+    def __init__(
+        self,
+        verbose: bool = False,
+        date_splits: List[date] = None,
+        use_spline: bool = False,
+    ) -> None:
         """
         Args:
             verbose (bool, optional): Whether to print messages on fit. Defaults to False.
+            date_splits (List[date], optional): List of dates for bounds if want to use time varying parameters. Defaults to None.
             use_spline (bool, optional): Whether to use splines in the GAM model, if false then linear terms are used instead. Defaults to False.
         """
         self.verbose = verbose
+        self.date_splits = date_splits
         self.use_spline = use_spline
         return
 
@@ -138,20 +195,28 @@ class StemPoissonRegressor:
 
         # Separate data for each model
         self.X_cases = X[
-            ["log_active_cases_yesterday", "log_percent_susceptible_yesterday"]
+            ["date", "log_active_cases_yesterday", "log_percent_susceptible_yesterday"]
         ]
         self.Y_cases = Y["cases"]
         self.X_removed = X[["log_active_cases_yesterday"]]
         self.Y_removed = Y["removed"]
 
-        # Model new cases data using infections and percentage susceptible at time t-1
-        if self.use_spline:
-            terms_cases = s(0) + s(1)
-            terms_removed = s(0)
+        # If time varying parameters then split each column by the date bounds
+        if self.date_splits:
+            self.X_cases = split_columns_dates(
+                self.X_cases, self.date_splits, drop_date=True
+            )
         else:
-            terms_cases = l(0) + l(1)
-            terms_removed = l(0)
+            self.X_cases = self.X_cases.drop("date", axis=1)
 
+        # Setup terms to use in GLM
+        term = s if self.use_spline else l
+        terms_removed = term(0)
+        terms_cases = term(0)
+        for i in range(1, len(self.X_cases.columns)):
+            terms_cases = terms_cases + term(i)
+
+        # Model new cases data using infections and percentage susceptible at time t-1
         self.poisson_gam_cases = PoissonGAM(terms_cases, verbose=self.verbose)
         self.poisson_gam_cases.fit(self.X_cases, self.Y_cases)
 
@@ -174,8 +239,8 @@ class StemPoissonRegressor:
         # Get 1 step predictions for all values in training set
         cases_preds = self.poisson_gam_cases.predict(self.X_cases)
         removed_preds = self.poisson_gam_removed.predict(self.X_removed)
-        cases_ci = self.poisson_gam_cases.confidence_intervals(self.X_cases)
-        removed_ci = self.poisson_gam_removed.confidence_intervals(self.X_removed)
+        # cases_ci = self.poisson_gam_cases.confidence_intervals(self.X_cases)
+        # removed_ci = self.poisson_gam_removed.confidence_intervals(self.X_removed)
 
         # Create result dataframe for training set data
         forecasts = pd.DataFrame(
@@ -185,10 +250,10 @@ class StemPoissonRegressor:
                 "cases_pred": cases_preds,
                 "removed_pred": removed_preds,
                 "active_cases_pred": np.nan,
-                "cases_ci_lower": cases_ci[:, 0],
-                "cases_ci_upper": cases_ci[:, 1],
-                "removed_ci_lower": removed_ci[:, 0],
-                "removed_ci_upper": removed_ci[:, 1],
+                # "cases_ci_lower": cases_ci[:, 0],
+                # "cases_ci_upper": cases_ci[:, 1],
+                # "removed_ci_lower": removed_ci[:, 0],
+                # "removed_ci_upper": removed_ci[:, 1],
                 "is_forecast": False,
             }
         )
@@ -200,14 +265,30 @@ class StemPoissonRegressor:
         Z = np.log(self.X_original["percent_susceptible"].iloc[-1])
         date = forecasts["date"].max()
 
+        # Keep track of current forecast to be used to predict next value
+        x_cases = self.X_cases.iloc[0, :].copy()
+        p = self.X_cases.shape[1]
+
+        # Set column names to use to index x_cases series when setting new values
+        if self.date_splits:
+            i = len(self.date_splits) - 1
+            col_log_I = f"log_active_cases_yesterday_{i}"
+            col_Z = f"log_percent_susceptible_yesterday_{i}"
+        else:
+            col_log_I = "log_active_cases_yesterday"
+            col_Z = "log_percent_susceptible_yesterday"
+
         for _ in range(h):
-            # Get predictions and CI for next step
+            # Set current values to previous forecast values
             log_I = np.log(I + 1)
-            x_cases = np.array([log_I, Z]).reshape(1, 2)
-            Y = self.poisson_gam_cases.predict(x_cases)[0]
+            x_cases.loc[:] = 0
+            x_cases.loc[[col_log_I, col_Z]] = log_I, Z
+
+            # Get predictions and CI for next step
+            Y = self.poisson_gam_cases.predict(x_cases.values.reshape(1, p))[0]
             R = self.poisson_gam_removed.predict(log_I)[0]
-            Y_ci = self.poisson_gam_cases.confidence_intervals(x_cases)[0]
-            R_ci = self.poisson_gam_removed.confidence_intervals(log_I)[0]
+            # Y_ci = self.poisson_gam_cases.confidence_intervals(x_cases)[0]
+            # R_ci = self.poisson_gam_removed.confidence_intervals(log_I)[0]
 
             # Update next values of I, Z, C
             I = max(I + Y - R, 1)
@@ -223,10 +304,10 @@ class StemPoissonRegressor:
                     "cases_pred": Y,
                     "removed_pred": R,
                     "active_cases_pred": I,
-                    "cases_ci_lower": Y_ci[0],
-                    "cases_ci_upper": Y_ci[1],
-                    "removed_ci_lower": R_ci[0],
-                    "removed_ci_upper": R_ci[1],
+                    # "cases_ci_lower": Y_ci[0],
+                    # "cases_ci_upper": Y_ci[1],
+                    # "removed_ci_lower": R_ci[0],
+                    # "removed_ci_upper": R_ci[1],
                     "is_forecast": True,
                 },
                 ignore_index=True,
