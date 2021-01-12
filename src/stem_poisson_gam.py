@@ -106,6 +106,9 @@ def split_columns_dates(
     """
     df = df.copy()
 
+    # Keep only dates that are within the dates of df
+    date_splits = [date for date in date_splits if date < df["date"].max()]
+
     cols = list(df.columns)
     cols.remove("date")
 
@@ -141,6 +144,7 @@ class StemPoissonRegressor:
     """
     Space-Time Epidemic model based on "Spatiotemporal Dynamics, Nowcasting and Forecasting of COVID-19 in the United States" (https://arxiv.org/abs/2004.14103)
     Fits two Poisson regression models to model the new cases and new deaths/recovered at time t.
+    Also has option for time varying parameters by date
 
     The first model for the new cases Y_t is modelled using the active cases I_t-1 and number of susceptible people S_t-1
     Y_t \sim Poisson(\mu_t) \\
@@ -203,6 +207,11 @@ class StemPoissonRegressor:
 
         # If time varying parameters then split each column by the date bounds
         if self.date_splits:
+            # Keep only dates that are within the dates of df
+            self.date_splits = [
+                date for date in self.date_splits if date < self.X_cases["date"].max()
+            ]
+
             self.X_cases = split_columns_dates(
                 self.X_cases, self.date_splits, drop_date=True
             )
