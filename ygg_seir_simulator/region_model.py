@@ -331,10 +331,10 @@ class RegionModel:
                 r_t *= fall_r_mult
 
             # Make sure R is stable
-            if day_idx > reopen_idx and abs(r_t / R_0_ARR[-1] - 1) > 0.2:
-                assert (
-                    False
-                ), f"{str(self)} - R changed too quickly: {day_idx} {R_0_ARR[-1]} -> {r_t} {R_0_ARR}"
+            # if day_idx > reopen_idx and abs(r_t / R_0_ARR[-1] - 1) > 0.2:
+            #     assert (
+            #         False
+            #     ), f"{str(self)} - R changed too quickly: {day_idx} {R_0_ARR[-1]} -> {r_t} {R_0_ARR}"
 
             R_0_ARR.append(r_t)
 
@@ -495,6 +495,16 @@ class RegionModel:
             self.country_str
             not in SOUTHERN_HEMISPHERE_COUNTRIES + NON_SEASONAL_COUNTRIES
         )
+
+    def set_projection_end_date(self, projection_end_date):
+        """
+        Sets projection end date
+
+        Args:
+            projection_end_date (date): Date for projection end date
+        """
+        self.projection_end_date = projection_end_date
+        self.N = (self.projection_end_date - self.first_date).days + 1
 
     @property
     def population(self):

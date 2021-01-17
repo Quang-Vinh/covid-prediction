@@ -15,6 +15,25 @@ import pandas as pd
 cur_dir = Path(__file__).parent
 
 
+# Province population data
+prov_map = {
+    "British Columbia": "BC",
+    "Newfoundland and Labrador": "NL",
+    "Northwest Territories": "NWT",
+    "Prince Edward Island": "PEI",
+}
+province_populations = (
+    pd.read_csv(cur_dir / "../data/canada_prov_population.csv")
+    .rename(columns={"GEO": "province", "VALUE": "population"})
+    .replace({"province": prov_map})
+    .loc[:, ["province", "population"]]
+)
+
+province_populations_dict = province_populations.set_index("province").to_dict()[
+    "population"
+]
+
+
 def get_covid_data(
     type: str, level: str = "canada", preprocess: bool = False
 ) -> pd.DataFrame:
@@ -68,21 +87,6 @@ def get_all_covid_data(level: str = "canada", preprocess: bool = False) -> pd.Da
     )
     recovered_data = get_covid_data(
         type="recovered", level=level, preprocess=preprocess
-    )
-
-    # Province population data
-    prov_map = {
-        "British Columbia": "BC",
-        "Newfoundland and Labrador": "NL",
-        "Northwest Territories": "NWT",
-        "Prince Edward Island": "PEI",
-    }
-
-    province_populations = (
-        pd.read_csv(cur_dir / "../data/canada_prov_population.csv")
-        .rename(columns={"GEO": "province", "VALUE": "population"})
-        .replace({"province": prov_map})
-        .loc[:, ["province", "population"]]
     )
 
     # Select columns of dataframes to be merged with
