@@ -89,7 +89,10 @@ def preprocess_data(
 
 
 def split_columns_dates(
-    df: pd.DataFrame, date_splits: List[date], drop_date: bool = False
+    df: pd.DataFrame,
+    date_splits: List[date],
+    cols: List[str] = None,
+    drop_date: bool = False,
 ):
     """
     Split all columns in df into several columns partitioned by date. For example if date_splits is [January 1 2020, January 10 2020, January 20 2020] then
@@ -99,6 +102,7 @@ def split_columns_dates(
     Args:
         df (pd.DataFrame): Dataframe with at least a date column.
         date_splits (List[date]): List of dates for bounds.
+        cols (List[str], optional): List of column to perform partition by date. If none then applies to all columns. Defaults to None
         drop_date (bool): Whether to keep date column in result dataframe. Defaults to False.
 
     Returns:
@@ -109,8 +113,9 @@ def split_columns_dates(
     # Keep only dates that are within the dates of df
     date_splits = [date for date in date_splits if date < df["date"].max()]
 
-    cols = list(df.columns)
-    cols.remove("date")
+    if not cols:
+        cols = list(df.columns)
+        cols.remove("date")
 
     # Split each column by each date bound
     for col in cols:
@@ -144,7 +149,7 @@ class StemPoissonRegressor:
     """
     Space-Time Epidemic model based on "Spatiotemporal Dynamics, Nowcasting and Forecasting of COVID-19 in the United States" (https://arxiv.org/abs/2004.14103)
     Fits two Poisson regression models to model the new cases and new deaths/recovered at time t.
-    Also has option for time varying parameters by date
+    Also has option for time varying parameters by date/
 
     The first model for the new cases Y_t is modelled using the active cases I_t-1 and number of susceptible people S_t-1
     Y_t \sim Poisson(\mu_t) \\
@@ -169,16 +174,23 @@ class StemPoissonRegressor:
         self,
         verbose: bool = False,
         date_splits: List[date] = None,
+        cols_date_splits: List[str] = None,
         use_spline: bool = False,
     ) -> None:
         """
         Args:
             verbose (bool, optional): Whether to print messages on fit. Defaults to False.
             date_splits (List[date], optional): List of dates for bounds if want to use time varying parameters. Defaults to None.
+            cols_date_splits (List[str], optional): List of columns to allow time varying parameters for. If none then uses all except the intercept. Defaults to None.
             use_spline (bool, optional): Whether to use splines in the GAM model, if false then linear terms are used instead. Defaults to False.
         """
         self.verbose = verbose
         self.date_splits = date_splits
+        self.cols_date_splits = (
+            cols_date_splits
+            if cols_date_splits
+            else ["log_active_cases_yesterday", "log_percent_susceptible_yesterday"]
+        )
         self.use_spline = use_spline
         return
 
@@ -200,10 +212,13 @@ class StemPoissonRegressor:
         # Separate data for each model
         self.X_cases = X[
             ["date", "log_active_cases_yesterday", "log_percent_susceptible_yesterday"]
-        ]
+        ].copy()
         self.Y_cases = Y["cases"]
-        self.X_removed = X[["log_active_cases_yesterday"]]
+        self.X_removed = X[["log_active_cases_yesterday"]].copy()
         self.Y_removed = Y["removed"]
+
+        # Add intercept constant
+        self.X_cases["intercept"] = 1
 
         # If time varying parameters then split each column by the date bounds
         if self.date_splits:
@@ -213,7 +228,10 @@ class StemPoissonRegressor:
             ]
 
             self.X_cases = split_columns_dates(
-                self.X_cases, self.date_splits, drop_date=True
+                df=self.X_cases,
+                date_splits=self.date_splits,
+                cols=self.cols_date_splits,
+                drop_date=True,
             )
         else:
             self.X_cases = self.X_cases.drop("date", axis=1)
@@ -226,7 +244,9 @@ class StemPoissonRegressor:
             terms_cases = terms_cases + term(i)
 
         # Model new cases data using infections and percentage susceptible at time t-1
-        self.poisson_gam_cases = PoissonGAM(terms_cases, verbose=self.verbose)
+        self.poisson_gam_cases = PoissonGAM(
+            terms_cases, fit_intercept=False, verbose=self.verbose
+        )
         self.poisson_gam_cases.fit(self.X_cases, self.Y_cases)
 
         # Model removed cases using infections at time t-1
@@ -278,12 +298,26 @@ class StemPoissonRegressor:
         x_cases = self.X_cases.iloc[0, :].copy()
         p = self.X_cases.shape[1]
 
-        # Set column names to use to index x_cases series when setting new values
+        # Set column names for indexing x_cases series when setting new values
         if self.date_splits:
             i = len(self.date_splits) - 1
-            col_log_I = f"log_active_cases_yesterday_{i}"
-            col_Z = f"log_percent_susceptible_yesterday_{i}"
+
+            if "intercept" in self.cols_date_splits:
+                intercept = f"intercept_{i}"
+            else:
+                intercept = "intercept"
+
+            if "log_active_cases_yesterday" in self.cols_date_splits:
+                col_log_I = f"log_active_cases_yesterday_{i}"
+            else:
+                col_log_I = "log_active_cases_yesterday"
+
+            if "log_percent_susceptible_yesterday" in self.cols_date_splits:
+                col_Z = f"log_percent_susceptible_yesterday_{i}"
+            else:
+                col_Z = "log_percent_susceptible_yesterday"
         else:
+            intercept = "intercept"
             col_log_I = "log_active_cases_yesterday"
             col_Z = "log_percent_susceptible_yesterday"
 
@@ -291,7 +325,7 @@ class StemPoissonRegressor:
             # Set current values to previous forecast values
             log_I = np.log(I + 1)
             x_cases.loc[:] = 0
-            x_cases.loc[[col_log_I, col_Z]] = log_I, Z
+            x_cases.loc[[intercept, col_log_I, col_Z]] = 1, log_I, Z
 
             # Get predictions and CI for next step
             Y = self.poisson_gam_cases.predict(x_cases.values.reshape(1, p))[0]
