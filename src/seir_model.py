@@ -6,15 +6,16 @@ Module for SEIR model
 
 
 # Built ins
-from datetime import timedelta
+from datetime import date, timedelta
 from pathlib import Path
+from typing import List
 import sys
 
 # Other
 import numpy as np
 import pandas as pd
 from scipy.integrate import solve_ivp
-from scipy.optimize import minimize
+from scipy.optimize import differential_evolution, dual_annealing, minimize
 
 # Add parent path
 current_dir = Path(__file__).resolve().parent
@@ -40,8 +41,22 @@ class SEIRModel:
         optimal_params (list): List of parameters for SEIR model in form [alpha, beta, gamma]
     """
 
-    def __init__(self, lam: float = 0.5):
+    def __init__(
+        self,
+        lam: float = 0.5,
+        method: str = "L-BFGS-B",
+        date_splits: List[date] = None,
+        verbose: bool = False,
+    ):
+        # Input check
+        if method not in ("L-BFGS-B", "differential_evolution", "dual_annealing"):
+            raise Exception("Invalid method option")
+
         self.lam = lam
+        self.method = method
+        self.date_splits = date_splits
+        self.verbose = verbose
+
         self.S_0 = None
         self.E_0 = None
         self.I_0 = None
@@ -62,9 +77,13 @@ class SEIRModel:
         Returns:
             list: List of ODEs for all values in y
         """
-        # Get SEIR parameters
+        # Get SEIR parameters. The Beta parameter which controls the movement of S to E can vary with time
         S, E, I, R = y
-        alpha, beta, gamma = params
+        alpha, gamma = params[-2:]
+
+        for i, time in enumerate(self.time_splits):
+            if t >= time:
+                beta = params[i]
 
         # Calculate ODEs
         dSdt = -beta * I * S / self.N
@@ -144,11 +163,52 @@ class SEIRModel:
         self.E_0 = self.I_0
         self.S_0 = self.N - self.E_0 - self.I_0
 
+        # Set time splits for time varying parameters
+        if self.date_splits:
+            dates = X["date"].to_list()
+            self.time_splits = [
+                dates.index(date_split) for date_split in self.date_splits
+            ]
+        else:
+            self.time_splits = [0]
+
         # Find optimal parameters
-        x0 = 3 * [0.5]
-        bounds = 3 * [(1e-4, 50)]
-        optimal = minimize(self.loss, x0=x0, bounds=bounds, method="L-BFGS-B", args=(X))
-        self.optimal_params = optimal.x
+        n_beta = len(self.time_splits)
+        n_params = n_beta + 2
+        x0 = n_params * [0.5]
+        bounds = n_params * [(1e-4, 10)]
+
+        if self.method == "L-BFGS-B":
+            self.optimal = minimize(
+                self.loss,
+                x0=x0,
+                bounds=bounds,
+                method="L-BFGS-B",
+                args=(X),
+                options={"disp": self.verbose},
+            )
+        elif self.method == "differential_evolution":
+            self.optimal = differential_evolution(
+                self.loss,
+                bounds=bounds,
+                args=[X],
+                strategy="best1bin",
+                maxiter=200,
+                popsize=50,
+                tol=0.01,
+                mutation=(0.5, 1),
+                recombination=0.7,
+                seed=None,
+                callback=None,
+                disp=self.verbose,
+                polish=True,
+                init="latinhypercube",
+            )
+        elif self.method == "dual_annealing":
+            self.optimal = dual_annealing(
+                self.loss, bounds=bounds, maxiter=10, args=[X]
+            )
+
         return
 
     def forecast(self, h: int = 21) -> pd.DataFrame:
@@ -167,7 +227,7 @@ class SEIRModel:
         ).dt.date
 
         # Get forecasted values and process columns
-        forecasts = self.seir_solution(params=self.optimal_params, dates=dates)
+        forecasts = self.seir_solution(params=self.optimal.x, dates=dates)
         forecasts["province"] = self.province
         forecasts["is_forecast"] = forecasts["date"] > end_date
         forecasts.rename(
