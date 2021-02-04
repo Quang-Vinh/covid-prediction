@@ -1,19 +1,22 @@
 # -*- coding: utf-8 -*-
 
 """
-Module for getting data from https://github.com/ishaberry/Covid19Canada
+Module for getting data from https://github.com/ishaberry/Covid19Canada and other useful functions
 """
 
 
 # Built-ins
+from datetime import datetime
 from pathlib import Path
+from typing import List
 
 # Other
+import numpy as np
 import pandas as pd
 
-# Current file path
+# File paths
 cur_dir = Path(__file__).parent
-
+data_dir = cur_dir / "../data"
 
 # Province population data
 prov_map = {
@@ -122,3 +125,70 @@ def get_all_covid_data(level: str = "canada", preprocess: bool = False) -> pd.Da
     )
 
     return all_covid_data
+
+
+def get_prov_gov_policies(province: str) -> pd.DataFrame:
+    """
+    Returns dataframe with government intervention and dates for given province
+
+    Args:
+        province (str): Province
+
+    Returns:
+        pd.DataFrame: Dataframe with government intervention
+    """
+    # Read and parse government intervention
+    dateparse = lambda x: datetime.strptime(x, "%d-%m-%Y")
+    prov_gov_policies = pd.read_csv(
+        data_dir / "prov_gov_policies.csv", parse_dates=["date"], date_parser=dateparse
+    ).query("province == @province")
+
+    # Sort by date
+    prov_gov_policies.sort_values(by="date", axis=0, inplace=True)
+
+    return prov_gov_policies
+
+
+
+
+def sigmoid(x: float, a: float = 1, b: float = 1, shift: float = 0) -> float:
+    """
+    Sigmoid function represented by b * \frac{1}{1 + e^{-a * (x - shift)}}}
+
+    Args:
+        x (float): Input x
+        a (float, optional): Rate of inflection. Defaults to 1.
+        b (float, optional): Difference of lowest to highest value. Defaults to 1.
+        shift (float, optional): Horizontal shift. Defaults to 0.
+
+    Returns:
+        float: sigmoid function at x
+    """
+    result = b * (1 / (1 + np.exp(-a * (x - shift))))
+    return result
+
+
+def combined_sigmoid(
+    x: float, y_list: List[float], splits: List[float], a: float = 1
+) -> float:
+    """
+    Sum of sigmoid functions.
+
+    Args:
+        x (float): Input x
+        y_list (List[float]): Value where each sigmoid converges to
+        splits (List[float]): Location of inflection point of each sigmoid function (shift)
+        a (float, optional): Rate of inflection. Defaults to 1.
+
+    Returns:
+        [float]: Sum of sigmoids at x
+    """
+    result = y_list[0]
+
+    # Loop through each set of parameters and compute sigmoid at x then add to result
+    for i in range(1, len(y_list)):
+        b = y_list[i] - y_list[i - 1]
+        shift = splits[i - 1]
+        result += sigmoid(x, a=a, b=b, shift=shift)
+
+    return result

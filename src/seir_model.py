@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 
 """
-Module for SEIR model
+Module for SEIR model 
 """
+
+# TODO: solve_ivp not returning y values for all of domain t sometimes
+# TODO: Scale infected and removed loss when combining them for total loss
 
 
 # Built ins
@@ -17,6 +20,9 @@ import pandas as pd
 from scipy.integrate import solve_ivp
 from scipy.optimize import differential_evolution, dual_annealing, minimize
 
+# Owned
+from .utils import combined_sigmoid
+
 # Add parent path
 current_dir = Path(__file__).resolve().parent
 parent_dir = current_dir.parent.absolute()
@@ -25,10 +31,11 @@ sys.path.append(str(parent_dir))
 
 class SEIRModel:
     """
-    SEIR model
+    SEIR model time varying parameter for infection rate from Susceptible component to Exposed.
 
     Args:
         lam (float, optional): Lambda value used to combine removed error and infected error. Total error = lambda * removed error + (1 - lambda) * infected error. Defaults to 0.5.
+        method (str, optional): Optimization method for estimating parameters. Defaults to 'L-BFGS-B'.
 
     Attributes:
         S_0 (int): Initial susceptible population
@@ -58,12 +65,23 @@ class SEIRModel:
         self.verbose = verbose
 
         self.S_0 = None
-        self.E_0 = None
         self.I_0 = None
         self.R_0 = 0
         self.N = None
         self.province = None
         return
+
+    def time_varying_betas(self) -> List[float]:
+        """
+        Returns list of the betas for all times from fitted data
+
+        Returns:
+            List[float]: List of betas
+        """
+        betas = self.optimal.x[1:-2]
+        t = self.X_original["date"].shape[0] + 20
+        betas = [combined_sigmoid(i, betas, self.time_splits, a=0.5) for i in range(t)]
+        return betas
 
     def seir_odes(self, t: int, y: list, params: list) -> list:
         """
@@ -80,10 +98,10 @@ class SEIRModel:
         # Get SEIR parameters. The Beta parameter which controls the movement of S to E can vary with time
         S, E, I, R = y
         alpha, gamma = params[-2:]
+        betas = params[:-2]
 
-        for i, time in enumerate(self.time_splits):
-            if t >= time:
-                beta = params[i]
+        # Get beta for current time t using a sigmoid function
+        beta = combined_sigmoid(t, y_list=betas, splits=self.time_splits, a=0.5)
 
         # Calculate ODEs
         dSdt = -beta * I * S / self.N
@@ -103,11 +121,15 @@ class SEIRModel:
         Returns:
             pd.DataFrame: Dataframe containing solutions for values of all compartments S, E, I, R for given dates
         """
+        # Pop first parameter for E_0
+        E_0 = params[0]
+        params = params[1:]
+
         # Run initial value solver
         size = len(dates)
         solution = solve_ivp(
             self.seir_odes,
-            y0=[self.S_0, self.E_0, self.I_0, self.R_0],
+            y0=[self.S_0, E_0, self.I_0, self.R_0],
             t_span=[0, size],
             t_eval=np.arange(0, size),
             args=[params],
@@ -160,24 +182,27 @@ class SEIRModel:
         self.province = X["province"].iloc[0]
         self.N = X["population"].iloc[0]
         self.I_0 = X["active_cases"].iloc[0]
-        self.E_0 = self.I_0
-        self.S_0 = self.N - self.E_0 - self.I_0
+        self.S_0 = self.N - self.I_0
 
-        # Set time splits for time varying parameters
+        # Set time splits for time varying parameters. Keep only date split points that exist within the given data
         if self.date_splits:
             dates = X["date"].to_list()
             self.time_splits = [
-                dates.index(date_split) for date_split in self.date_splits
+                dates.index(date_split)
+                for date_split in self.date_splits
+                if date_split in dates
             ]
         else:
-            self.time_splits = [0]
+            self.time_splits = []
+
+        # First parameter is for E_0 , next n-2 parameters are for betas and last 2 parameters for alpha and gamma
+        n_beta = len(self.time_splits) + 1
+        n_params = n_beta + 3
+        # Initial values and bounds for optimization. Bounds and initial value for E_0 will be different
+        x0 = [10] + (n_params - 1) * [0.5]
+        bounds = [(0, 100)] + (n_params - 1) * [(1e-4, 10)]
 
         # Find optimal parameters
-        n_beta = len(self.time_splits)
-        n_params = n_beta + 2
-        x0 = n_params * [0.5]
-        bounds = n_params * [(1e-4, 10)]
-
         if self.method == "L-BFGS-B":
             self.optimal = minimize(
                 self.loss,
