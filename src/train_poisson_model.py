@@ -75,8 +75,9 @@ def main(h: int):
         models[province] = model
 
     # Save results to output
+    current_date = date.today().strftime("%d-%m-%Y")
     joblib.dump(models, output_path / "poisson_models.pkl")
-    forecasts.to_csv(output_path / "poisson_forecasts.csv", index=False)
+    forecasts.to_csv(output_path / f"poisson_forecasts_{current_date}.csv", index=False)
 
     return
 

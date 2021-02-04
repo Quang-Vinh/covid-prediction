@@ -356,6 +356,12 @@ class StemPoissonRegressor:
                 ignore_index=True,
             )
 
+        # Add cumulative cases and removed predictions
+        forecasts = forecasts.assign(
+            cumulative_cases_pred=lambda x: x["cases_pred"].cumsum(),
+            cumulative_removed_pred=lambda x: x["removed_pred"].cumsum(),
+        )
+
         return forecasts
 
 
