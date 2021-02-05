@@ -20,7 +20,7 @@ import pandas as pd
 
 # Custom
 cur_dir = Path(__file__).parent
-ygg_simulator_path = cur_dir / "../ygg_seir_simulator"
+ygg_simulator_path = str(cur_dir / "../ygg_seir_simulator")
 if ygg_simulator_path not in sys.path:
     sys.path.append(ygg_simulator_path)
 
@@ -37,9 +37,9 @@ quarantine_effectiveness = -1
 best_params_type = "mean"
 country = "Canada"
 region = "ALL"
-best_params_dir = "../models/best_params/latest"
+best_params_dir = cur_dir / "../models/best_params/latest"
 
-# YGG simutor parameters
+# YGG simulator parameters
 variable_params = [
     "INITIAL_R_0",
     "LOCKDOWN_R_0",
@@ -238,7 +238,7 @@ class SEIRYGGForecaster:
             elif variable_param == "REOPEN_INFLECTION":
                 bound = [(0.1, 0.6)]
             elif variable_param == "REOPEN_SHIFT_DAYS":
-                bound = [(0, 40)]
+                bound = [(-28, 28)]
             else:
                 bound = [(x0[i] * 0.7, x0[i] * 1.2)]
 
@@ -309,5 +309,6 @@ class SEIRYGGForecaster:
         self.region_model.init_params(params_tups)
 
         forecasts = predict(self.region_model, self.X_original)
+        forecasts["province"] = self.province
 
         return forecasts
