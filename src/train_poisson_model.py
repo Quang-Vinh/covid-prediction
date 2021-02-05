@@ -79,6 +79,8 @@ def main(h: int):
     joblib.dump(models, output_path / "poisson_models.pkl")
     forecasts.to_csv(output_path / f"poisson_forecasts_{current_date}.csv", index=False)
 
+    print("Finished training models")
+
     return
 
 
