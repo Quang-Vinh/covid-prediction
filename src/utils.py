@@ -44,7 +44,7 @@ def get_covid_data(
     Gets up to date Canada covid data from https://github.com/ishaberry/Covid19Canada
 
     Args:
-        type (str): Type of data to retrieve. Options are active, cases, mortality, recovered, and testing
+        type (str): Type of data to retrieve. Options are active, cases, mortality, recovered, testing, and vaccine_completion
         level (str, optional): Level of data to retrieve. Options are prov or canada. Defaults to "canada".
         preprocess (bool, optional): Whether to clean errors in data. Defaults to False
 
@@ -80,36 +80,17 @@ def get_all_covid_data(level: str = "canada", preprocess: bool = False) -> pd.Da
     Returns:
         pd.DataFrame: Covid19 time series data
     """
-    # Read in data
-    cases_data = get_covid_data(type="cases", level=level, preprocess=preprocess)
-    active_cases_data = get_covid_data(
-        type="active", level=level, preprocess=preprocess
-    )
-    mortality_data = get_covid_data(
-        type="mortality", level=level, preprocess=preprocess
-    )
-    recovered_data = get_covid_data(
-        type="recovered", level=level, preprocess=preprocess
-    )
-
-    # Select columns of dataframes to be merged with
-    recovered_data = recovered_data.loc[:, ["province", "date", "recovered"]]
-    mortality_data = mortality_data.loc[:, ["province", "date", "deaths"]]
-    cases_data = cases_data.loc[:, ["province", "date", "cases"]]
+    # Read in and merge all data types
+    types = ["cases", "mortality", "recovered", "vaccine_completion"]
+    all_covid_data = get_covid_data(type="active", level=level, preprocess=preprocess)
+    for type in types:
+        covid_data = get_covid_data(type=type, level="prov")
+        cols_on = covid_data.columns.intersection(all_covid_data.columns).to_list()
+        all_covid_data = all_covid_data.merge(covid_data, how="left", on=cols_on)
 
     # Preprocessing
     all_covid_data = (
-        active_cases_data
-        # Merge deaths and recovered data
-        .merge(mortality_data, how="left", on=["province", "date"])
-        .merge(recovered_data, how="left", on=["province", "date"])
-        .merge(cases_data, how="left", on=["province", "date"])
-        .fillna(0)
-        # Turn floats back to int
-        .assign(
-            deaths=lambda x: x["deaths"].astype(int),
-            recovered=lambda x: x["recovered"].astype(int),
-        )
+        all_covid_data.fillna(0)
         # Remove non province data
         .query('province != "Repatriated"')
         # Add population data per province
@@ -132,6 +113,7 @@ def get_prov_gov_policies(province: str) -> pd.DataFrame:
     Returns dataframe with government intervention and dates for given province
 
     Args:
+
         province (str): Province
 
     Returns:
@@ -147,8 +129,6 @@ def get_prov_gov_policies(province: str) -> pd.DataFrame:
     prov_gov_policies.sort_values(by="date", axis=0, inplace=True)
 
     return prov_gov_policies
-
-
 
 
 def sigmoid(x: float, a: float = 1, b: float = 1, shift: float = 0) -> float:
