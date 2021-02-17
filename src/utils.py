@@ -108,7 +108,7 @@ def get_all_covid_data(level: str = "canada", preprocess: bool = False) -> pd.Da
     return all_covid_data
 
 
-def get_prov_gov_policies(province: str) -> pd.DataFrame:
+def get_prov_gov_policies(province: str = None) -> pd.DataFrame:
     """
     Returns dataframe with government intervention and dates for given province
 
@@ -123,7 +123,10 @@ def get_prov_gov_policies(province: str) -> pd.DataFrame:
     dateparse = lambda x: datetime.strptime(x, "%d-%m-%Y")
     prov_gov_policies = pd.read_csv(
         data_dir / "prov_gov_policies.csv", parse_dates=["date"], date_parser=dateparse
-    ).query("province == @province")
+    )
+
+    if province:
+        prov_gov_policies = prov_gov_policies.query("province == @province").copy()
 
     # Sort by date
     prov_gov_policies.sort_values(by="date", axis=0, inplace=True)
