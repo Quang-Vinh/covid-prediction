@@ -3141,10 +3141,9 @@ slide:not(.current) .plotly.html-widget{
 </article></slide><slide class=""><hgroup><h2>Model definition</h2></hgroup><article  id="model-definition">
 
 <ul>
-<li>4 compartments - Susceptible, Exposed, Infected, and Removed</li>
+<li><p>4 compartments - Susceptible, Exposed, Infected, and Removed</p></li>
+<li><p>ODEs:</p></li>
 </ul>
-
-<h3>ODEs:</h3>
 
 <p>\[
 \begin{aligned}
@@ -3154,6 +3153,10 @@ slide:not(.current) .plotly.html-widget{
 \frac{dR}{dt} &amp;= \gamma I
 \end{aligned}
 \]</p>
+
+<ul>
+<li>Current approach with time dependent parameter \(\beta(t)\) to handle government policies</li>
+</ul>
 
 </article></slide><slide class=""><hgroup><h2>Parameter estimation</h2></hgroup><article  id="parameter-estimation">
 
@@ -3193,6 +3196,7 @@ log(\mu_t) = \beta_{1} + \beta_{2}log(I_{t-1} + 1) + \alpha log(S_{t-1}/N)
 \Delta D_t \sim Poisson({\mu_t}^D) \\
 log({\mu_t}^D) = \beta_{1}^D + \beta_{2}^D log(I_{t-1} + 1)
 \]</p></li>
+<li><p>Experimenting with time dependent parameters \(\beta(t)\) to handle government policies</p></li>
 </ul>
 
 </article></slide><slide class=""><hgroup><h2>Parameter estimation</h2></hgroup><article  id="parameter-estimation-1">

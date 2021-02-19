@@ -18,7 +18,7 @@ knitr::opts_chunk$set(echo = FALSE)
 
 - 4 compartments - Susceptible, Exposed, Infected, and Removed
 
-### ODEs:
+- ODEs:
 
 $$
 \begin{aligned}
@@ -28,6 +28,8 @@ $$
 \frac{dR}{dt} &= \gamma I
 \end{aligned}
 $$
+
+- Current approach with time dependent parameter $\beta(t)$ to handle government policies
 
 
 ## Parameter estimation
@@ -69,6 +71,7 @@ $$
 \Delta D_t \sim Poisson({\mu_t}^D) \\
 log({\mu_t}^D) = \beta_{1}^D + \beta_{2}^D log(I_{t-1} + 1)
 $$
+- Experimenting with time dependent parameters $\beta(t)$ to handle government policies
 
 
 ## Parameter estimation
