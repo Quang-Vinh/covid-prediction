@@ -95,9 +95,8 @@ def split_columns_dates(
     drop_date: bool = False,
 ):
     """
-    Split all columns in df into several columns partitioned by date. For example if date_splits is [January 1 2020, January 10 2020, January 20 2020] then
-
-    each column of df is split into 3 columns where col_0 has values for Jan 1 2020 to Jan 10 2020 and is 0 every else, ..., and col_2 has values for Jan 20 2020 and onwards.
+    Split all columns in df into several columns partitioned by date. For example if date_splits is [January 1 2020, January 10 2020] then
+    each column of df is split into 4 columns where col_0 has values for First date to Jan 1 2020 and is 0 every else, ..., and col_2 has values for Jan 1 2020 to Jan 10 2020, and so on.
 
     Args:
         df (pd.DataFrame): Dataframe with at least a date column.
@@ -113,31 +112,37 @@ def split_columns_dates(
     # Keep only dates that are within the dates of df
     date_splits = [date for date in date_splits if date < df["date"].max()]
 
-    if not cols:
-        cols = list(df.columns)
-        cols.remove("date")
+    if len(date_splits) > 0:
+        # Add first date of df if it's less than first date in date splits
+        first_date = df["date"].min()
+        if first_date < date_splits[0]:
+            date_splits = [first_date] + date_splits
 
-    # Split each column by each date bound
-    for col in cols:
-        for i in range(len(date_splits)):
+        if not cols:
+            cols = list(df.columns)
+            cols.remove("date")
 
-            # Get bounds for dates
-            start_date = date_splits[i]
+        # Split each column by each date bound
+        for col in cols:
+            for i in range(len(date_splits)):
 
-            if i == len(date_splits) - 1:
-                end_date = df["date"].max() + timedelta(days=10)
-            else:
-                end_date = date_splits[i + 1] - timedelta(days=1)
+                # Get bounds for dates
+                start_date = date_splits[i]
 
-            # Add new column to df where between date bounds there are values and everywhere else is 0
-            col_name = f"{col}_{i}"
-            col_values = df[col].copy()
-            date_index = ~df["date"].between(start_date, end_date)
-            col_values.loc[date_index] = 0
+                if i == len(date_splits) - 1:
+                    end_date = df["date"].max() + timedelta(days=10)
+                else:
+                    end_date = date_splits[i + 1] - timedelta(days=1)
 
-            df.insert(1, col_name, col_values)
+                # Add new column to df where between date bounds there are values and everywhere else is 0
+                col_name = f"{col}_{i}"
+                col_values = df[col].copy()
+                date_index = ~df["date"].between(start_date, end_date)
+                col_values.loc[date_index] = 0
 
-        df = df.drop(col, axis=1)
+                df.insert(1, col_name, col_values)
+
+            df = df.drop(col, axis=1)
 
     if drop_date:
         df = df.drop("date", axis=1)
@@ -176,6 +181,7 @@ class StemPoissonRegressor:
         date_splits: List[date] = None,
         cols_date_splits: List[str] = None,
         use_spline: bool = False,
+        lam: float = 0.6,
     ) -> None:
         """
         Args:
@@ -192,6 +198,7 @@ class StemPoissonRegressor:
             else ["log_active_cases_yesterday", "log_percent_susceptible_yesterday"]
         )
         self.use_spline = use_spline
+        self.lam = lam
         return
 
     def fit(
@@ -238,10 +245,10 @@ class StemPoissonRegressor:
 
         # Setup terms to use in GLM
         term = s if self.use_spline else l
-        terms_removed = term(0)
-        terms_cases = term(0)
+        terms_removed = term(0, lam=self.lam)
+        terms_cases = term(0, lam=self.lam)
         for i in range(1, len(self.X_cases.columns)):
-            terms_cases = terms_cases + term(i)
+            terms_cases = terms_cases + term(i, lam=self.lam)
 
         # Model new cases data using infections and percentage susceptible at time t-1
         self.poisson_gam_cases = PoissonGAM(

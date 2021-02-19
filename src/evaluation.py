@@ -5,6 +5,7 @@ Module for model evaluation
 """
 
 # Built-in
+from copy import deepcopy
 from typing import Any, Iterable, List, Tuple
 
 # Other
@@ -20,7 +21,7 @@ def time_series_cross_val_scores(
     responses: List[str],
     k: int = 10,
     h_list: List[int] = [1, 3, 5, 7, 14, 21],
-    min_train_size: int = 50,
+    min_train_size: int = 100,
     n_jobs: int = 1,
 ) -> dict:
     """
@@ -53,7 +54,12 @@ def time_series_cross_val_scores(
     parallel = Parallel(n_jobs=n_jobs)
     results = parallel(
         delayed(fit_and_score)(
-            model, X, Y, split_point=split_point, responses=responses, h_list=h_list
+            model,
+            X,
+            Y,
+            split_point=split_point,
+            responses=responses,
+            h_list=h_list,
         )
         for split_point in split_points
     )
@@ -92,6 +98,7 @@ def fit_and_score(
         [pd.DataFrame]: Dataframe containing the result scores for the model
     """
     max_h = max(h_list)
+    model = deepcopy(model)
 
     # Split into train/test sets
     X_train, Y_train = X.iloc[:split_point], Y.iloc[:split_point]

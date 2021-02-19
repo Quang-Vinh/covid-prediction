@@ -84,7 +84,7 @@ def get_all_covid_data(level: str = "canada", preprocess: bool = False) -> pd.Da
     types = ["cases", "mortality", "recovered", "vaccine_completion"]
     all_covid_data = get_covid_data(type="active", level=level, preprocess=preprocess)
     for type in types:
-        covid_data = get_covid_data(type=type, level="prov")
+        covid_data = get_covid_data(type=type, level="prov", preprocess=preprocess)
         cols_on = covid_data.columns.intersection(all_covid_data.columns).to_list()
         all_covid_data = all_covid_data.merge(covid_data, how="left", on=cols_on)
 
