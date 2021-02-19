@@ -7,6 +7,10 @@
 # References
 /references/*.mp4
 
+# R/Rmarkdown
+.Rproj.user
+.Rhistory
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -101,3 +105,4 @@ target/
 
 # Mypy cache
 .mypy_cache/
+.Rproj.user
