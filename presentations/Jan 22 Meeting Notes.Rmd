@@ -1,0 +1,36 @@
+---
+title: "Jan 22 Meeting Notes"
+# author: "Quang-Vinh Do 8771581"
+date: "22/01/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+## Poisson Regression
+
+- For time dependent parameters $B_0(t)$, have constraints on continuity of function at knots instead of representing it as a simple piecewise function. Possibly use a sigmoid or some other function that has the property of higher rate of change at the moment of change of policy followed by slower rate of change.
+
+- For incorporating effects from other nearby provinces consider having constraints on parameters between provinces. For example from ON to QC and QC to ON should have the same nearby province effect $B_{QC, ON}$
+
+- As well, we can possibly simplify these types of problems and make use of the same package by using some clever transformations $Y = X^* B$ where $X^* = AX$ for some matrix $A$.
+
+
+## SEIR Compartment Model
+
+- Similar to Poisson regression above, have constraints on continuity of function $B_0(t)$ (the infection rate).
+
+- YGG model is very powerful right now and gives pretty good results.
+
+- Continue experimenting with SEIR model using ODEs for time varying parameters (though YGG simulator does have a similar property to some extent). Also, look into adding extra compartments to better represent the situation such as detected/undetected infections and split the removed compartment into recovered and deaths.
+
+- Have $E_0$ as learnable parameter.
+
+
+## Other
+
+- Keep track of model predictions to have comparisons to real test data and show model performance.
