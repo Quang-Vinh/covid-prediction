@@ -206,7 +206,7 @@ class SEIRModel:
         else:
             self.time_splits = []
 
-        # First parameter is for E_0 , next n-2 parameters are for betas and last 2 parameters for alpha and gamma
+        # First parameter is for E_0 , next n-3 parameters are for betas and last 2 parameters for alpha and gamma
         n_beta = len(self.time_splits) + 1
         n_params = n_beta + 3
         # Initial values and bounds for optimization. Bounds and initial value for E_0 will be different
