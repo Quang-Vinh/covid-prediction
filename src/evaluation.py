@@ -9,9 +9,39 @@ from copy import deepcopy
 from typing import Any, Iterable, List, Tuple
 
 # Other
-from joblib import delayed, Parallel, parallel
+from joblib import delayed, Parallel
 import numpy as np
 import pandas as pd
+
+
+def rmse(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    """
+    Calculates root mean squared error RMSE
+
+    Args:
+        y_true (np.ndarray): Actual values Y
+        y_pred (np.ndarray): Predicted values Y
+
+    Returns:
+        [float]: rmse
+    """
+    error = y_true - y_pred
+    return np.sqrt((error ** 2).mean())
+
+
+def smape(y_true, y_pred):
+    """
+    Calculates symmetric mean absolute percentage error SMAPE
+
+    Args:
+        y_true (np.ndarray): Actual values Y
+        y_pred (np.ndarray): Predicted values Y
+
+    Returns:
+        [float]: smape
+    """
+    error = np.abs(y_true - y_pred) / ((np.abs(y_true) + np.abs(y_pred)) / 2)
+    return 100 * np.mean(error)
 
 
 def time_series_cross_val_scores(
@@ -65,11 +95,21 @@ def time_series_cross_val_scores(
     )
     cv_scores_all = pd.concat(results)
 
-    # Aggregate to get rmse by h and response
-    cv_scores_summarised = cv_scores_all.groupby(by=["h", "response"]).apply(
-        lambda x: np.sqrt((x["error"] ** 2).mean())
+    # Aggregate to get rmse and smape grouped by h and response
+    cv_scores_groupby = cv_scores_all.groupby(by=["h", "response"])
+
+    rmse_scores = (
+        cv_scores_groupby.apply(lambda x: rmse(x["actual"], x["forecast"]))
+        .to_frame("rmse")
+        .reset_index()
     )
-    cv_scores_summarised = pd.DataFrame({"rmse": cv_scores_summarised}).reset_index()
+    smape_scores = (
+        cv_scores_groupby.apply(lambda x: smape(x["actual"], x["forecast"]))
+        .to_frame("smape")
+        .reset_index()
+    )
+
+    cv_scores_summarised = pd.merge(rmse_scores, smape_scores)
     cv_scores = {"all": cv_scores_all, "summarised": cv_scores_summarised}
 
     return cv_scores
