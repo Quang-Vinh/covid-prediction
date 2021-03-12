@@ -40,7 +40,7 @@ def smape(y_true, y_pred):
     Returns:
         [float]: smape
     """
-    error = np.abs(y_true - y_pred) / ((np.abs(y_true) + np.abs(y_pred)) / 2)
+    error = np.abs(y_true - y_pred) / (np.abs(y_true) + np.abs(y_pred))
     return 100 * np.mean(error)
 
 
