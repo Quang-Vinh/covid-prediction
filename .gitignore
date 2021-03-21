@@ -1,6 +1,9 @@
 # Jupyter lab
 .virtual_documents
 
+# Ignore twitter data provided by third party company
+/data/twitter_sentiment
+
 # All outputs
 /output/*
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Module for getting data from https://github.com/ishaberry/Covid19Canada and other useful functions
+Module for getting data from https://github.com/ishaberry/Covid19Canada and loading Twitter sentiment data. Also contains many other useful functions
 """
 
 
@@ -26,7 +26,7 @@ prov_map = {
     "Prince Edward Island": "PEI",
 }
 province_populations = (
-    pd.read_csv(cur_dir / "../data/canada_prov_population.csv")
+    pd.read_csv(data_dir / "canada_prov_population.csv")
     .rename(columns={"GEO": "province", "VALUE": "population"})
     .replace({"province": prov_map})
     .loc[:, ["province", "population"]]
@@ -35,6 +35,70 @@ province_populations = (
 province_populations_dict = province_populations.set_index("province").to_dict()[
     "population"
 ]
+
+# Twitter data
+twitter_file_names = [
+    "CANADA_longitudinal_data_by_region_2020-01-01_to_2020-07-01.xlsx",
+    "CANADA_longitudinal_data_by_region_2020-07-01_to_2021-03-12.xlsx",
+]
+twitter_dir = data_dir / "twitter_sentiment"
+twitter_file_paths = [twitter_dir / file_name for file_name in twitter_file_names]
+
+
+def clean_names(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Clean up column names of dataframe
+
+    Args:
+        df (pd.DataFrame): Dataframe input
+
+    Returns:
+        pd.DataFrame: Dataframe with cleaned column names
+    """
+    df.columns = (
+        df.columns.str.strip()
+        .str.lower()
+        .str.replace(" ", "_")
+        .str.replace("(", "")
+        .str.replace(")", "")
+    )
+
+    return df
+
+
+def load_twitter_data() -> pd.DataFrame:
+    """
+    Load twitter data to dataframe
+
+    Returns:
+        [pd.DataFrame]: Dataframe containing twitter sentiment data
+    """
+    twitter_data = []
+
+    # Loop through each excel file and sheet and concatenate them together
+    for file_path in twitter_file_paths:
+        for i in range(0, 5):
+            topic_data = pd.read_excel(
+                io=file_path,
+                sheet_name=f"Topic {i + 1}",
+                engine="openpyxl",
+            )
+
+            # Preprocess
+            topic_data = clean_names(topic_data)
+            topic_data = topic_data.dropna(subset=["topic_num"]).rename(
+                columns={"variable": "province"}
+            )
+
+            twitter_data.append(topic_data)
+
+    # Combine and remove duplicates
+    twitter_data = pd.concat(twitter_data)
+    twitter_data = twitter_data.drop_duplicates(
+        subset=["topic_num", "date", "province"], keep="last"
+    )
+
+    return twitter_data
 
 
 def get_covid_data(
