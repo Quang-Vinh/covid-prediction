@@ -4,7 +4,7 @@
 # Modeling
 import numpy as np
 import pandas as pd
-from pygam import PoissonGAM, s, l
+from pygam import PoissonGAM, s, l, te
 
 # Built-ins
 from datetime import date, timedelta
@@ -345,6 +345,249 @@ class StemPoissonRegressor:
             C = C + Y
             Z = np.log((N - C) / N)
             date = date + timedelta(days=1)
+
+            # Append predicted value at time t+h
+            forecasts = forecasts.append(
+                {
+                    "date": date,
+                    "province": province,
+                    "cases_pred": Y,
+                    "removed_pred": R,
+                    "active_cases_pred": I,
+                    # "cases_ci_lower": Y_ci[0],
+                    # "cases_ci_upper": Y_ci[1],
+                    # "removed_ci_lower": R_ci[0],
+                    # "removed_ci_upper": R_ci[1],
+                    "is_forecast": True,
+                },
+                ignore_index=True,
+            )
+
+        # Add cumulative cases and removed predictions
+        forecasts = forecasts.assign(
+            cumulative_cases_pred=lambda x: x["cases_pred"].cumsum(),
+            cumulative_removed_pred=lambda x: x["removed_pred"].cumsum(),
+        )
+
+        return forecasts
+
+
+class StemPoissonTwitterRegressor:
+    """
+    Space-Time Epidemic model based on "Spatiotemporal Dynamics, Nowcasting and Forecasting of COVID-19 in the United States" (https://arxiv.org/abs/2004.14103)
+    Fits two Poisson regression models to model the new cases and new deaths/recovered at time t.
+    Also has option for time varying parameters by date/
+
+    The first model for the new cases Y_t is modelled using the active cases I_t-1 and number of susceptible people S_t-1
+    Y_t \sim Poisson(\mu_t) \\
+    log(\mu_t) = \beta_{1t} + \beta_{2t}log(I_{t-1} + 1) + \alpha_tlog(S_{t-1}/N)   
+
+    The second model for the new deaths/recovered \Delta D_t is modelled using the active cases I_t-1
+    \Delta D_t \sim Poisson({\mu_t}^D) \\
+    log({\mu_t}^D) = \beta_{1t}^D + \beta_{2t}^D log(I_{t-1} + 1)
+
+    Attributes:
+        X_original {pandas dataframe} -- Original X dataframe called on fit()
+        Y_original {pandas dataframe} -- Original Y dataframe called on fit()
+        X_cases {pandas dataframe} -- Transformed X dataframe used for fitting new cases model
+        Y_case {pandas dataframe} -- Y dataframe used for fitting new cases model
+        X_removed {pandas dataframe} -- Transformed X dataframe used for fitting new removed model
+        Y_removed {pandas dataframe} -- Y dataframe used for fitting new removed model
+        poisson_gam_cases {PoissonGAM model} -- Poisson regression model for new cases
+        poisson_gam_removed {PoissonGAM model} -- Poisson regression model for new removed 
+    """
+
+    def __init__(
+        self,
+        verbose: bool = False,
+        date_splits: List[date] = None,
+        cols_date_splits: List[str] = None,
+        use_spline: bool = False,
+        lam: float = 0.6,
+        twitter_data: pd.DataFrame = None,
+        twitter_offset: int = 14,
+    ) -> None:
+        """
+        Args:
+            verbose (bool, optional): Whether to print messages on fit. Defaults to False.
+            date_splits (List[date], optional): List of dates for bounds if want to use time varying parameters. Defaults to None.
+            cols_date_splits (List[str], optional): List of columns to allow time varying parameters for. If none then uses all except the intercept. Defaults to None.
+            use_spline (bool, optional): Whether to use splines in the GAM model, if false then linear terms are used instead. Defaults to False.
+        """
+        self.verbose = verbose
+        self.date_splits = date_splits
+        self.cols_date_splits = (
+            cols_date_splits
+            if cols_date_splits
+            else ["log_active_cases_yesterday", "log_percent_susceptible_yesterday"]
+        )
+        self.use_spline = use_spline
+        self.lam = lam
+        self.twitter_data = twitter_data
+        self.twitter_offset = twitter_offset
+        return
+
+    def fit(
+        self,
+        X: pd.DataFrame,
+        Y: pd.DataFrame,
+    ):
+        """
+        Fit a poisson regression model each for the cases using active_cases and percentage_susceptible at time t-1, and another model
+        for removed using active_cases at time t-1.
+        Args:
+            X (pd.DataFrame): Dataframe for given region of predictor variables containing columns date, active_cases, percent_susceptible
+            Y (pd.DataFrame): Dataframe for given region of response variables containing columns cases, removed
+        """
+        # Remove days in data that are after the latest twitter data given
+        if self.twitter_data is not None:
+            remove_date = self.twitter_data["date"].max()
+        else:
+            remove_date = X["date"].max()
+
+        X = X.query("date <= @remove_date")
+        Y = Y.query("date <= @remove_date")
+
+        self.X_original = X.copy()
+        self.Y_original = Y.copy()
+
+        # Separate data for each model
+        self.X_cases = X[
+            ["date", "log_active_cases_yesterday", "log_percent_susceptible_yesterday"]
+        ].copy()
+        self.Y_cases = Y["cases"]
+        self.X_removed = X[["date", "log_active_cases_yesterday"]].copy()
+        self.Y_removed = Y["removed"]
+
+        # Preprocess twitter data by shifting it by twitter_offset days so each row contains the twitter data from twitter_offset days ago
+        if self.twitter_data is not None:
+            twitter_shifted = self.twitter_data.drop(
+                ["date", "province"], axis=1
+            ).shift(periods=self.twitter_offset, axis=0)
+            twitter_shifted.columns = [
+                f"{col}_shifted" for col in twitter_shifted.columns
+            ]
+            twitter_shifted = twitter_shifted.assign(date=self.twitter_data["date"])
+
+            # Add twitter data to use in both cases and removed models
+            self.X_cases = self.X_cases.merge(twitter_shifted, how="left", on=["date"])
+            self.X_removed = self.X_removed.merge(
+                twitter_shifted, how="left", on=["date"]
+            )
+
+        # Drop date columns not used anymore
+        self.X_cases = self.X_cases.drop("date", axis=1)
+        self.X_removed = self.X_removed.drop("date", axis=1)
+
+        # Setup terms for covid19 data to use in GLM
+        term = s if self.use_spline else l
+        terms_cases = term(0, lam=self.lam) + term(1, lam=self.lam)
+        terms_removed = term(0, lam=self.lam)
+
+        # Add terms for twitter data
+        twitter_cols = self.twitter_data.columns.drop(["date", "province"])
+        for i in range(0, len(twitter_cols)):
+            terms_cases = terms_cases + term(i + 2, lam=self.lam)
+            terms_removed = terms_removed + term(i + 1, lam=self.lam)
+
+        # Model new cases data using infections and percentage susceptible at time t-1
+        self.poisson_gam_cases = PoissonGAM(terms_cases, verbose=self.verbose)
+        self.poisson_gam_cases.fit(self.X_cases, self.Y_cases)
+
+        # Model removed cases using infections at time t-1
+        self.poisson_gam_removed = PoissonGAM(terms_removed, verbose=self.verbose)
+        self.poisson_gam_removed.fit(self.X_removed, self.Y_removed)
+
+        return
+
+    def forecast(self, h: int = 1) -> pd.DataFrame:
+        """
+        Gives forecasted new cases, active cases, and cumulative number of removed.
+        Args:
+            h (int, optional): Number of h step predictions to make. Defaults to 1.
+        Returns:
+            pd.DataFrame: Dataframe containing 1 step predictions for all data in training set along with h step forecasts
+        """
+        province = self.X_original["province"].iloc[-1]
+
+        # Get 1 step predictions for all values in training set
+        cases_preds = self.poisson_gam_cases.predict(self.X_cases)
+        removed_preds = self.poisson_gam_removed.predict(self.X_removed)
+        # cases_ci = self.poisson_gam_cases.confidence_intervals(self.X_cases)
+        # removed_ci = self.poisson_gam_removed.confidence_intervals(self.X_removed)
+
+        # Create result dataframe for training set data
+        forecasts = pd.DataFrame(
+            {
+                "date": self.X_original["date"],
+                "province": province,
+                "cases_pred": cases_preds,
+                "removed_pred": removed_preds,
+                "active_cases_pred": np.nan,
+                # "cases_ci_lower": cases_ci[:, 0],
+                # "cases_ci_upper": cases_ci[:, 1],
+                # "removed_ci_lower": removed_ci[:, 0],
+                # "removed_ci_upper": removed_ci[:, 1],
+                "is_forecast": False,
+            }
+        )
+
+        # Get h step predictions iteratively. Start with last actual known values of active cases and percent susceptible
+        C = self.X_original["cumulative_cases"].iloc[-1]
+        N = self.X_original["population"].iloc[-1]
+        I = self.X_original["active_cases"].iloc[-1]
+        Z = np.log(self.X_original["percent_susceptible"].iloc[-1])
+        date = forecasts["date"].max()
+
+        # Keep track of current forecast to be used to predict next value
+        x_cases = self.X_cases.iloc[0, :].copy()
+        x_removed = self.X_removed.iloc[0, :].copy()
+        x_cases.loc[:] = 0
+        x_removed.loc[:] = 0
+
+        # Column names for variables
+        col_log_I = "log_active_cases_yesterday"
+        col_Z = "log_percent_susceptible_yesterday"
+        if self.twitter_data is not None:
+            twitter_cols = x_cases.index.drop([col_log_I, col_Z]).to_list()
+        else:
+            twitter_cols = []
+
+        for _ in range(h):
+            date = date + timedelta(days=1)
+
+            # Get twitter data corresponding to twitter_offset days ago. If does not exist then just use the most recent twitter data
+            if self.twitter_data is not None:
+                twitter_date = date - timedelta(days=self.twitter_offset)
+                if twitter_date <= self.twitter_data["date"].max():
+                    twitter_row = self.twitter_data.query("date == @twitter_date").iloc[
+                        0
+                    ]
+                else:
+                    twitter_row = self.twitter_data.iloc[-1]
+                twitter_row = twitter_row.drop(["date", "province"])
+                twitter_values = twitter_row.values.tolist()
+            else:
+                twitter_values = []
+
+            # Set current values to previous forecast values and add twitter data
+            log_I = np.log(I + 1)
+            x_cases.loc[[col_log_I, col_Z] + twitter_cols] = [
+                log_I,
+                Z,
+            ] + twitter_values
+            x_removed.loc[[col_log_I] + twitter_cols] = [log_I] + twitter_values
+
+            # Get predictions and CI for next step
+            Y = self.poisson_gam_cases.predict(x_cases.values.reshape(1, -1))[0]
+            R = self.poisson_gam_removed.predict(x_removed.values.reshape(1, -1))[0]
+            # Y_ci = self.poisson_gam_cases.confidence_intervals(x_cases)[0]
+            # R_ci = self.poisson_gam_removed.confidence_intervals(log_I)[0]
+
+            # Update next values of I, Z, C
+            I = max(I + Y - R, 1)
+            C = C + Y
+            Z = np.log((N - C) / N)
 
             # Append predicted value at time t+h
             forecasts = forecasts.append(

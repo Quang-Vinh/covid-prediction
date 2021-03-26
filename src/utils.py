@@ -18,13 +18,15 @@ import pandas as pd
 cur_dir = Path(__file__).parent
 data_dir = cur_dir / "../data"
 
-# Province population data
+# Dictionary to map population and twitter province names to COVID19 province names
 prov_map = {
     "British Columbia": "BC",
     "Newfoundland and Labrador": "NL",
     "Northwest Territories": "NWT",
     "Prince Edward Island": "PEI",
 }
+
+# Province population data
 province_populations = (
     pd.read_csv(data_dir / "canada_prov_population.csv")
     .rename(columns={"GEO": "province", "VALUE": "population"})
@@ -86,8 +88,11 @@ def load_twitter_data() -> pd.DataFrame:
 
             # Preprocess
             topic_data = clean_names(topic_data)
-            topic_data = topic_data.dropna(subset=["topic_num"]).rename(
-                columns={"variable": "province"}
+            topic_data = (
+                topic_data.dropna(subset=["topic_num"])
+                .rename(columns={"variable": "province"})
+                .assign(date=lambda x: x["date"].dt.date)
+                .replace({"province": prov_map})
             )
 
             twitter_data.append(topic_data)
@@ -96,7 +101,7 @@ def load_twitter_data() -> pd.DataFrame:
     twitter_data = pd.concat(twitter_data)
     twitter_data = twitter_data.drop_duplicates(
         subset=["topic_num", "date", "province"], keep="last"
-    )
+    ).reset_index(drop=True)
 
     return twitter_data
 
