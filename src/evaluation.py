@@ -29,7 +29,7 @@ def rmse(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     return np.sqrt((error ** 2).mean())
 
 
-def smape(y_true, y_pred):
+def smape(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     """
     Calculates symmetric mean absolute percentage error SMAPE
 
@@ -71,7 +71,6 @@ def time_series_cross_val_scores(
     Returns:
         dict: Dictionary of with keys 'all' for all cross validation results and 'summarised' for the summarised rmse results per h and response.
     """
-
     n = X.shape[0]
     max_h = max(h_list)
     end = n - max_h

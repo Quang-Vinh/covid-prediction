@@ -166,11 +166,17 @@ def get_all_covid_data(level: str = "canada", preprocess: bool = False) -> pd.Da
         .merge(province_populations, how="left", on="province")
         # Add transformed variables
         .assign(
+            # Removed individuals
             removed=lambda x: x["recovered"] + x["deaths"],
             cumulative_removed=lambda x: x["cumulative_recovered"]
             + x["cumulative_deaths"],
+            # Susceptible individuals
             susceptible=lambda x: x["population"] - x["cumulative_cases"],
             percent_susceptible=lambda x: x["susceptible"] / x["population"],
+            # Vaccine related
+            percent_cvaccine=lambda x: x["cvaccine"] / x["population"],
+            percent_cumulative_cvaccine=lambda x: x["cumulative_cvaccine"]
+            / x["population"],
         )
     )
 

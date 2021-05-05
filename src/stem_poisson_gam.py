@@ -150,11 +150,11 @@ def split_columns_dates(
     return df
 
 
-class StemPoissonRegressor:
+class StemPoissonTimeVaryRegressor:
     """
     Space-Time Epidemic model based on "Spatiotemporal Dynamics, Nowcasting and Forecasting of COVID-19 in the United States" (https://arxiv.org/abs/2004.14103)
     Fits two Poisson regression models to model the new cases and new deaths/recovered at time t.
-    Also has option for time varying parameters by date/
+    Also has option for time varying parameters by date
 
     The first model for the new cases Y_t is modelled using the active cases I_t-1 and number of susceptible people S_t-1
     Y_t \sim Poisson(\mu_t) \\
@@ -376,7 +376,7 @@ class StemPoissonTwitterRegressor:
     """
     Space-Time Epidemic model based on "Spatiotemporal Dynamics, Nowcasting and Forecasting of COVID-19 in the United States" (https://arxiv.org/abs/2004.14103)
     Fits two Poisson regression models to model the new cases and new deaths/recovered at time t.
-    Also has option for time varying parameters by date/
+    Also has the option to take in twitter data as extra features in the regression model.
 
     The first model for the new cases Y_t is modelled using the active cases I_t-1 and number of susceptible people S_t-1
     Y_t \sim Poisson(\mu_t) \\
@@ -400,8 +400,6 @@ class StemPoissonTwitterRegressor:
     def __init__(
         self,
         verbose: bool = False,
-        date_splits: List[date] = None,
-        cols_date_splits: List[str] = None,
         use_spline: bool = False,
         lam: float = 0.6,
         twitter_data: pd.DataFrame = None,
@@ -410,17 +408,12 @@ class StemPoissonTwitterRegressor:
         """
         Args:
             verbose (bool, optional): Whether to print messages on fit. Defaults to False.
-            date_splits (List[date], optional): List of dates for bounds if want to use time varying parameters. Defaults to None.
-            cols_date_splits (List[str], optional): List of columns to allow time varying parameters for. If none then uses all except the intercept. Defaults to None.
             use_spline (bool, optional): Whether to use splines in the GAM model, if false then linear terms are used instead. Defaults to False.
+            lam (float, optional): Lambda parameter for regularization. Defaults to 0.6
+            twitter_data (pd.DataFrame, optional): Dataframe of additional twitter data
+            twitter_offset (int, optional): Allow twitter data to have delayed effect. The offset parameter specifies the number of days in the future the current twitter data will effect. Defaults to 14.
         """
         self.verbose = verbose
-        self.date_splits = date_splits
-        self.cols_date_splits = (
-            cols_date_splits
-            if cols_date_splits
-            else ["log_active_cases_yesterday", "log_percent_susceptible_yesterday"]
-        )
         self.use_spline = use_spline
         self.lam = lam
         self.twitter_data = twitter_data
@@ -601,6 +594,183 @@ class StemPoissonTwitterRegressor:
                     # "cases_ci_upper": Y_ci[1],
                     # "removed_ci_lower": R_ci[0],
                     # "removed_ci_upper": R_ci[1],
+                    "is_forecast": True,
+                },
+                ignore_index=True,
+            )
+
+        # Add cumulative cases and removed predictions
+        forecasts = forecasts.assign(
+            cumulative_cases_pred=lambda x: x["cases_pred"].cumsum(),
+            cumulative_removed_pred=lambda x: x["removed_pred"].cumsum(),
+        )
+
+        return forecasts
+
+
+class StemPoissonRegressor:
+    """
+    Space-Time Epidemic model based on "Spatiotemporal Dynamics, Nowcasting and Forecasting of COVID-19 in the United States" (https://arxiv.org/abs/2004.14103)
+    Fits two Poisson regression models to model the new cases and new deaths/recovered at time t.
+
+    The first model for the new cases Y_t is modelled using the active cases I_t-1 and number of susceptible people S_t-1
+    Y_t \sim Poisson(\mu_t) \\
+    log(\mu_t) = \beta_{1t} + \beta_{2t}log(I_{t-1} + 1) + \alpha_tlog(S_{t-1}/N)   
+
+    The second model for the new deaths/recovered \Delta D_t is modelled using the active cases I_t-1
+    \Delta D_t \sim Poisson({\mu_t}^D) \\
+    log({\mu_t}^D) = \beta_{1t}^D + \beta_{2t}^D log(I_{t-1} + 1)
+
+    Attributes:
+        X_original {pandas dataframe} -- Original X dataframe called on fit()
+        Y_original {pandas dataframe} -- Original Y dataframe called on fit()
+        X_cases {pandas dataframe} -- Transformed X dataframe used for fitting new cases model
+        Y_case {pandas dataframe} -- Y dataframe used for fitting new cases model
+        X_removed {pandas dataframe} -- Transformed X dataframe used for fitting new removed model
+        Y_removed {pandas dataframe} -- Y dataframe used for fitting new removed model
+        poisson_gam_cases {PoissonGAM model} -- Poisson regression model for new cases
+        poisson_gam_removed {PoissonGAM model} -- Poisson regression model for new removed 
+    """
+
+    def __init__(
+        self,
+        verbose: bool = False,
+        use_spline: bool = False,
+        lam: float = 0.6,
+        vaccination: bool = False,
+    ) -> None:
+        """
+        Args:
+            verbose (bool, optional): Whether to print messages on fit. Defaults to False.
+            use_spline (bool, optional): Whether to use splines in the GAM model, if false then linear terms are used instead. Defaults to False.
+            lam (float, optional): Lambda parameter for regularization. Defaults to 0.6
+            vaccination (bool, optional): If to include vaccination data or not. Defaults to False
+        """
+        self.verbose = verbose
+        self.use_spline = use_spline
+        self.lam = lam
+        self.vaccination = vaccination
+        return
+
+    def fit(
+        self,
+        X: pd.DataFrame,
+        Y: pd.DataFrame,
+    ):
+        """
+        Fit a poisson regression model each for the cases using active_cases and percentage_susceptible at time t-1, and another model
+        for removed using active_cases at time t-1.
+        Args:
+            X (pd.DataFrame): Dataframe for given region of predictor variables containing columns date, active_cases, percent_susceptible. If including vaccination data then column percent_cvaccine must also be included.
+            Y (pd.DataFrame): Dataframe for given region of response variables containing columns cases, removed
+        """
+        self.X_original = X.copy()
+        self.Y_original = Y.copy()
+
+        self.N = self.X_original["population"].iloc[-1]
+
+        # Get average proportion of vaccinated individuals over last 2 weeks
+        if self.vaccination:
+            self.average_perc_vaccinated = X["percent_cvaccine"].tail(14).mean()
+            self.average_vaccinated = self.average_perc_vaccinated * self.N
+        else:
+            self.average_perc_vaccinated = 0
+            self.average_vaccinated = 0
+
+        # Separate data for each model
+        self.X_cases = X[
+            ["log_active_cases_yesterday", "log_percent_susceptible_yesterday"]
+        ].copy()
+        self.Y_cases = Y["cases"]
+        self.X_removed = X[["log_active_cases_yesterday"]].copy()
+        self.Y_removed = Y["removed"]
+
+        # Setup terms for covid19 data to use in GLM
+        term = s if self.use_spline else l
+        terms_cases = term(0, lam=self.lam) + term(1, lam=self.lam)
+        terms_removed = term(0, lam=self.lam)
+
+        # Model new cases data using infections and percentage susceptible at time t-1
+        self.poisson_gam_cases = PoissonGAM(terms_cases, verbose=self.verbose)
+        self.poisson_gam_cases.fit(self.X_cases, self.Y_cases)
+
+        # Model removed cases using infections at time t-1
+        self.poisson_gam_removed = PoissonGAM(terms_removed, verbose=self.verbose)
+        self.poisson_gam_removed.fit(self.X_removed, self.Y_removed)
+
+        return
+
+    def forecast(self, h: int = 1) -> pd.DataFrame:
+        """
+        Gives forecasted new cases, active cases, and cumulative number of removed.
+        Args:
+            h (int, optional): Number of h step predictions to make. Defaults to 1.
+        Returns:
+            pd.DataFrame: Dataframe containing 1 step predictions for all data in training set along with h step forecasts
+        """
+        province = self.X_original["province"].iloc[-1]
+
+        # Get 1 step predictions for all values in training set
+        cases_preds = self.poisson_gam_cases.predict(self.X_cases)
+        removed_preds = self.poisson_gam_removed.predict(self.X_removed)
+
+        # Create result dataframe for training set data
+        forecasts = pd.DataFrame(
+            {
+                "date": self.X_original["date"],
+                "province": province,
+                "cases_pred": cases_preds,
+                "removed_pred": removed_preds,
+                "active_cases_pred": np.nan,
+                "is_forecast": False,
+            }
+        )
+
+        # Get h step predictions iteratively. Start with last actual known values of active cases and percent susceptible
+        I = self.X_original["active_cases"].iloc[-1]
+        S = self.X_original["susceptible"].iloc[-1]
+        Z = np.log(self.X_original["percent_susceptible"].iloc[-1])
+        date = forecasts["date"].max()
+
+        # Keep track of current forecast to be used to predict next value
+        x_cases = self.X_cases.iloc[0, :].copy()
+        x_removed = self.X_removed.iloc[0, :].copy()
+        x_cases.loc[:] = 0
+        x_removed.loc[:] = 0
+
+        # Column names for variables
+        col_log_I = "log_active_cases_yesterday"
+        col_Z = "log_percent_susceptible_yesterday"
+
+        for _ in range(h):
+            date = date + timedelta(days=1)
+
+            # Set current values to previous forecast values and add twitter data
+            log_I = np.log(I + 1)
+            x_cases.loc[[col_log_I, col_Z]] = [
+                log_I,
+                Z,
+            ]
+            x_removed.loc[[col_log_I]] = [log_I]
+
+            # Get predictions and CI for next step
+            Y = self.poisson_gam_cases.predict(x_cases.values.reshape(1, -1))[0]
+            R = self.poisson_gam_removed.predict(x_removed.values.reshape(1, -1))[0]
+
+            # Update next values of I, Z, C
+            S = S - Y - self.average_vaccinated
+            # C = C + Y
+            I = max(I + Y - R, 1)
+            Z = np.log(S / self.N)
+
+            # Append predicted value at time t+h
+            forecasts = forecasts.append(
+                {
+                    "date": date,
+                    "province": province,
+                    "cases_pred": Y,
+                    "removed_pred": R,
+                    "active_cases_pred": I,
                     "is_forecast": True,
                 },
                 ignore_index=True,
