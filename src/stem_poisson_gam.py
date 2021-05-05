@@ -638,6 +638,7 @@ class StemPoissonRegressor:
         use_spline: bool = False,
         lam: float = 0.6,
         vaccination: bool = False,
+        most_recent_days: int = None,
     ) -> None:
         """
         Args:
@@ -650,6 +651,7 @@ class StemPoissonRegressor:
         self.use_spline = use_spline
         self.lam = lam
         self.vaccination = vaccination
+        self.most_recent_days = most_recent_days
         return
 
     def fit(
@@ -664,6 +666,10 @@ class StemPoissonRegressor:
             X (pd.DataFrame): Dataframe for given region of predictor variables containing columns date, active_cases, percent_susceptible. If including vaccination data then column percent_cvaccine must also be included.
             Y (pd.DataFrame): Dataframe for given region of response variables containing columns cases, removed
         """
+        if self.most_recent_days is not None:
+            X = X.tail(self.most_recent_days)
+            Y = Y.tail(self.most_recent_days)
+
         self.X_original = X.copy()
         self.Y_original = Y.copy()
 
