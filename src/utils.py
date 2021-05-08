@@ -227,17 +227,19 @@ def sigmoid(x: float, a: float = 1, b: float = 1, shift: float = 0) -> float:
 
 
 def combined_sigmoid(
-    x: float, y_list: List[float], splits: List[float], a: float = 1
+    x: float,
+    y_list: List[float],
+    splits: List[float],
+    a: float,
+    bias: int = 0,
 ) -> float:
     """
     Sum of sigmoid functions.
-
     Args:
         x (float): Input x
         y_list (List[float]): Value where each sigmoid converges to
         splits (List[float]): Location of inflection point of each sigmoid function (shift)
         a (float, optional): Rate of inflection. Defaults to 1.
-
     Returns:
         [float]: Sum of sigmoids at x
     """
@@ -247,6 +249,6 @@ def combined_sigmoid(
     for i in range(1, len(y_list)):
         b = y_list[i] - y_list[i - 1]
         shift = splits[i - 1]
-        result += sigmoid(x, a=a, b=b, shift=shift)
+        result += sigmoid(x, a=a, b=b, shift=shift + bias)
 
     return result
